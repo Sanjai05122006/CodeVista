@@ -5,7 +5,11 @@ dotenv.config();
 
 const BASE_URL = process.env.JUDGE0_BASE_URL;
 
-// 🔥 Language mapping (can later fetch dynamically)
+if (!BASE_URL) {
+  throw new Error("JUDGE0_BASE_URL is not defined in .env");
+}
+
+//Language mapping
 const languageMap: Record<string, number> = {
   javascript: 63,
   python: 71,
@@ -16,27 +20,48 @@ export const executeJudge0 = async (code: string, language: string) => {
   const language_id = languageMap[language];
 
   if (!language_id) {
-    throw new Error("Unsupported language");
+    throw new Error(`Unsupported language: ${language}`);
   }
 
-  const response = await axios.post(
-    `${BASE_URL}/submissions?base64_encoded=false&wait=true`,
-    {
-      source_code: code,
-      language_id,
-    },
-    {
-      headers: {
-        "Content-Type": "application/json",
+  try {
+    const response = await axios.post(
+      `${BASE_URL}/submissions?base64_encoded=false&wait=true`,
+      {
+        source_code: code,
+        language_id,
       },
-    }
-  );
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        timeout: 10000, 
+      }
+    );
 
-  return response.data;
+    return response.data;
+
+  } catch (error: any) {
+    console.error("JUDGE0 ERROR:", {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+    });
+
+    throw new Error("Judge0 execution failed");
+  }
 };
 
-// 🔥 Fetch languages
+//Fetch supported languages
 export const getLanguages = async () => {
-  const response = await axios.get(`${BASE_URL}/languages`);
-  return response.data;
+  try {
+    const response = await axios.get(`${BASE_URL}/languages`, {
+      timeout: 5000,
+    });
+
+    return response.data;
+
+  } catch (error: any) {
+    console.error("JUDGE0 LANGUAGES ERROR:", error.message);
+    throw new Error("Failed to fetch languages");
+  }
 };
