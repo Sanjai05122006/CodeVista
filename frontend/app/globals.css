@@ -1,69 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 body {
-  margin: 0;
-  padding: 0;
-  background: #0f172a;
-  color: white;
-  font-family: monospace;
-}
-
-/* Container */
-.container {
-  min-height: 100vh;
-  padding: 40px;
-}
-
-/* Title */
-.title {
-  font-size: 28px;
-  margin-bottom: 20px;
-}
-
-/* Controls */
-.controls {
-  margin-bottom: 15px;
-}
-
-.select {
-  padding: 8px;
-  border-radius: 6px;
-  background: #1e293b;
-  color: white;
-  border: none;
-}
-
-.runBtn {
-  margin-left: 10px;
-  padding: 8px 16px;
-  border-radius: 6px;
-  border: none;
-  background: #22c55e;
-  color: black;
-  cursor: pointer;
-  font-weight: bold;
-}
-
-/* Editor */
-.editor {
-  width: 100%;
-  padding: 15px;
-  border-radius: 10px;
-  background: #020617;
-  color: #38bdf8;
-  border: 1px solid #1e293b;
-  outline: none;
-  font-size: 14px;
-}
-
-/* Output */
-.outputTitle {
-  margin-top: 20px;
-}
-
-.outputBox {
-  background: #020617;
-  padding: 15px;
-  border-radius: 10px;
-  border: 1px solid #1e293b;
-  min-height: 80px;
-  color: #4ade80;
+  background-color: #020617;
+  color: #e2e8f0;
 }
