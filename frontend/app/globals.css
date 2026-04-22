@@ -2,7 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+html {
+  height: 100%;
+  font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
 body {
+  height: 100%;
+  margin: 0;
   background-color: #020617;
   color: #e2e8f0;
+}
+
+code,
+pre,
+.font-mono {
+  font-family: "Cascadia Code", "Consolas", "SFMono-Regular", monospace;
 }

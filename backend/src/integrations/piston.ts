@@ -1,9 +1,7 @@
 import axios from "axios";
-import dotenv from "dotenv";
+import { env } from "../config/env";
 
-dotenv.config();
-
-const PISTON_BASE_URL = process.env.PISTON_BASE_URL;
+const PISTON_BASE_URL = env.PISTON_BASE_URL;
 
 const pistonLanguageMap: Record<string, string> = {
   javascript: "javascript",
