@@ -1,13 +1,7 @@
 import axios from "axios";
-import dotenv from "dotenv";
+import { env } from "../config/env";
 
-dotenv.config();
-
-const BASE_URL = process.env.JUDGE0_BASE_URL;
-
-if (!BASE_URL) {
-  throw new Error("JUDGE0_BASE_URL is not defined in .env");
-}
+const BASE_URL = env.JUDGE0_BASE_URL;
 
 //Language mapping
 const languageMap: Record<string, number> = {
