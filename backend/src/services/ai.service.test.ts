@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { AIServiceError } from "../errors/ai.error";
 import {
   analyzeCode,
   buildPrompt,
@@ -128,6 +129,37 @@ const run = async () => {
 
   assert.equal(fallbackResult.time_complexity.best, "N/A");
   assert.deepEqual(fallbackResult.algorithm_steps, []);
+
+  const groqFallbackResult = await analyzeCode("return 1", "javascript", {
+    providers: [
+      {
+        name: "gemini",
+        provider: async () => {
+          throw new AIServiceError(
+            "AI_NETWORK_ERROR",
+            "status 429: gemini busy",
+            429
+          );
+        },
+      },
+      {
+        name: "groq",
+        provider: async () =>
+          JSON.stringify({
+            pseudocode: ["1. RETURN result"],
+            algorithm_steps: ["1. Use Groq fallback."],
+            time_complexity: "O(1)",
+            space_complexity: "O(1)",
+          }),
+      },
+    ],
+    cache: {
+      get: () => null,
+      set: () => undefined,
+    },
+  });
+
+  assert.equal(groqFallbackResult.source, "groq");
 
   const key = getAnalysisCacheKey("console.log(2+3)", "javascript");
   const comparison = getAnalysisCacheKey(

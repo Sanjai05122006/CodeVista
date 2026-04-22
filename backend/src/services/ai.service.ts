@@ -1,15 +1,26 @@
 import { generateGeminiAnalysis } from "../integrations/gemini";
+import { generateGroqAnalysis } from "../integrations/groq";
 import { AIServiceError } from "../errors/ai.error";
 import { cacheService } from "./cache.service";
-import { AnalysisResponse, AnalysisResult } from "../types/analysis";
+import {
+  AnalysisResponse,
+  AnalysisResult,
+  AnalysisSource,
+} from "../types/analysis";
 import { sha256 } from "../utils/hash";
 import { logger } from "../utils/logger";
 import { normalizeAnalysis, safeParse } from "../utils/analysis-normalizer";
 
 type CacheLike = Pick<typeof cacheService, "get" | "set">;
+type AnalysisProvider = (prompt: string) => Promise<string>;
+type ProviderName = Exclude<AnalysisSource, "cache">;
 
 type AnalyzeDependencies = {
-  provider?: (prompt: string) => Promise<string>;
+  provider?: AnalysisProvider;
+  providers?: Array<{
+    name: ProviderName;
+    provider: AnalysisProvider;
+  }>;
   cache?: CacheLike;
 };
 
@@ -30,8 +41,13 @@ const analysisCache = new Map<string, CacheEntry>();
 let tokens = RATE_LIMIT_TOKENS;
 let lastRefill = Date.now();
 let queue: Promise<void> = Promise.resolve();
-let isRateLimited = false;
-let rateLimitResetTime = 0;
+const providerCooldowns: Record<
+  ProviderName,
+  { isRateLimited: boolean; resetTime: number }
+> = {
+  gemini: { isRateLimited: false, resetTime: 0 },
+  groq: { isRateLimited: false, resetTime: 0 },
+};
 
 export const MASTER_PROMPT = `
 You are a lightweight code analysis engine.
@@ -47,20 +63,124 @@ space_complexity
 
 Rules:
 
-* DO NOT include algorithm name
+* DO NOT include algorithm name in output
 * DO NOT include explanation
 * DO NOT include any extra fields
 * DO NOT include markdown
 * DO NOT include text outside JSON
 * Keep pseudocode short (5-8 lines max)
 * Keep algorithm_steps short (4-8 lines max)
-* Use simple numbered steps for pseudocode and algorithm_steps
+* Use simple numbered steps
 * Pseudocode is required
 * algorithm_steps is required
 * Always return valid JSON
 
+CRITICAL ANALYSIS RULES:
+
+* Internally identify the algorithm pattern to guide reasoning
+
+* DO NOT include the pattern in final output
+
+* Derive time complexity step-by-step:
+  Example:
+  Binary search → log S
+  Validation loop → N
+  Final → O(N log S)
+
+* Prefer reasoning over guessing
+
+* If unsure, derive logically before answering
+
+* Output must reflect actual algorithm behavior
+
+COMPLEXITY PRECISION RULE:
+
+* Always compute complexity based on actual operations
+
+* If binary search is applied on a subset:
+  → Use subset size (e.g., min(m,n))
+
+* Prefer tighter bounds:
+
+  * Use min(), max(), or exact variables
+
+* Avoid generic expressions like O(log(m+n)) if tighter bound exists
+
+COMPLEXITY JUSTIFICATION RULE:
+
+* Ensure complexity reflects:
+
+  * how many times each element/node is processed
+  * nested operations
+DATA STRUCTURE ABSTRACTION RULE:
+
+- Replace implementation-specific constructs with abstract terms:
+  set(), heapq, list
+  SET, MIN-HEAP, ARRAY
+
+- Use operations:
+  EXTRACT-MIN, INSERT, ADD, REMOVE
+
+- Do NOT mention libraries or functions
+
+PSEUDOCODE STRUCTURE RULE:
+
+- Follow standard textbook pseudocode format
+
+- Start with:
+  FUNCTION name(parameters)
+
+- Use ONLY these constructs:
+  IF / ELSE
+  FOR / WHILE
+  RETURN
+
+- Use clear structured blocks with indentation
+
+- Use abstract operations only:
+  INITIALIZE, ADD, SET, FIND, UNION, RETURN
+
+- DO NOT use:
+  programming syntax ([], (), .append, list, range, etc.)
+  language-specific expressions
+  index-based access like arr[i]
+
+- Use descriptive variable names:
+  u, v, node, edge, array
+
+- Use tuple-style iteration:
+  FOR EACH element (a, b, c) IN collection
+
+- Each line must represent a logical step (not explanation)
+- Do NOT use variable names for data structures (e.g., min_heap)
+- Use only abstract structure names (MIN-HEAP, SET)
+- Output must look like a structured algorithm, not code and not sentences
+
+NO EXPLANATION RULE:
+
+- Do NOT include descriptive phrases like:
+  "with values from", "check if", "ignore"
+- Keep statements short and structural
+- Each line must represent an operation, not an explanation
+
+  variable assignments using symbols (=, +=)
+  library/function names (heapq, push, pop)
+
+- Use descriptive operations:
+  SET total_cost TO 0
+  ADD weight TO total_cost
+
+
+ALGORITHM_STEPS RULE:
+
+* Explain the flow in simple, logical steps
+* Focus on what the algorithm is doing, not code syntax
+* Maintain correct order of execution
+* Avoid repeating the same idea in multiple steps
+* Keep explanations concise and clear
+
 IMPORTANT:
-Even if unsure, return valid JSON with best guess.
+Even if unsure, return valid JSON with best possible reasoning.
 
 Language: {{language}}
 
@@ -85,10 +205,12 @@ export const getAnalysisCacheKey = (
 
 const sleep = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-const resetCooldownIfExpired = () => {
-  if (isRateLimited && Date.now() >= rateLimitResetTime) {
-    isRateLimited = false;
-    rateLimitResetTime = 0;
+const resetCooldownIfExpired = (providerName: ProviderName) => {
+  const cooldown = providerCooldowns[providerName];
+
+  if (cooldown.isRateLimited && Date.now() >= cooldown.resetTime) {
+    cooldown.isRateLimited = false;
+    cooldown.resetTime = 0;
   }
 };
 
@@ -222,28 +344,38 @@ const isFallbackResult = (result: AnalysisResponse) => {
   );
 };
 
-const callGeminiWithRateLimit = async (
-  provider: (prompt: string) => Promise<string>,
+const ANALYSIS_PROVIDERS: Array<{
+  name: ProviderName;
+  provider: AnalysisProvider;
+}> = [
+  { name: "gemini", provider: generateGeminiAnalysis },
+  { name: "groq", provider: generateGroqAnalysis },
+];
+
+const callProviderWithRateLimit = async (
+  providerName: ProviderName,
+  provider: AnalysisProvider,
   prompt: string,
   cacheKey: string,
   language: string
 ) => {
-  resetCooldownIfExpired();
+  resetCooldownIfExpired(providerName);
+  const cooldown = providerCooldowns[providerName];
 
-  if (isRateLimited && Date.now() < rateLimitResetTime) {
+  if (cooldown.isRateLimited && Date.now() < cooldown.resetTime) {
     throw new AIServiceError(
       "AI_NETWORK_ERROR",
-      `cooldown active until ${rateLimitResetTime}`
+      `cooldown active until ${cooldown.resetTime}`
     );
   }
 
   return enqueue(async () => {
-    resetCooldownIfExpired();
+    resetCooldownIfExpired(providerName);
 
-    if (isRateLimited && Date.now() < rateLimitResetTime) {
+    if (cooldown.isRateLimited && Date.now() < cooldown.resetTime) {
       throw new AIServiceError(
         "AI_NETWORK_ERROR",
-        `cooldown active until ${rateLimitResetTime}`
+        `cooldown active until ${cooldown.resetTime}`
       );
     }
 
@@ -262,9 +394,10 @@ const callGeminiWithRateLimit = async (
 
       if (isRateLimitedError(serviceError)) {
         const delay = extractRetryDelay(serviceError.message);
-        isRateLimited = true;
-        rateLimitResetTime = Date.now() + delay;
+        cooldown.isRateLimited = true;
+        cooldown.resetTime = Date.now() + delay;
         logger.warn("analysis.cooldown_enabled", {
+          provider: providerName,
           cache_key: cacheKey,
           language,
           delay,
@@ -283,9 +416,12 @@ export const analyzeCode = async (
   dependencies: AnalyzeDependencies = {}
 ): Promise<AnalysisResult> => {
   const activeCache = dependencies.cache || cacheService;
-  const provider = dependencies.provider || generateGeminiAnalysis;
   const cacheKey = getAnalysisCacheKey(code, language);
-  resetCooldownIfExpired();
+  const providers = dependencies.providers
+    ? dependencies.providers
+    : dependencies.provider
+    ? [{ name: "gemini" as const, provider: dependencies.provider }]
+    : ANALYSIS_PROVIDERS;
 
   const localCached = getLocalCache(cacheKey);
   if (localCached) {
@@ -316,37 +452,6 @@ export const analyzeCode = async (
     };
   }
 
-  if (isRateLimited && Date.now() < rateLimitResetTime) {
-    logger.warn("analysis.cooldown_active", {
-      cache_key: cacheKey,
-      language,
-      reset_time: rateLimitResetTime,
-    });
-
-    const serviceCached = activeCache.get<AnalysisResponse>(cacheKey);
-    if (serviceCached) {
-      setLocalCache(cacheKey, serviceCached, VALID_TTL_MINUTES);
-      logger.info("analysis.cache.hit", {
-        cache_key: cacheKey,
-        language,
-        prompt_version: PROMPT_VERSION,
-        cache_layer: "service",
-      });
-      return {
-        ...serviceCached,
-        source: "cache",
-      };
-    }
-
-    activeCache.set(cacheKey, fallbackResponse, FALLBACK_TTL_MINUTES);
-    setLocalCache(cacheKey, fallbackResponse, FALLBACK_TTL_MINUTES);
-
-    return {
-      ...fallbackResponse,
-      source: "gemini",
-    };
-  }
-
   logger.info("analysis.cache.miss", {
     cache_key: cacheKey,
     language,
@@ -355,81 +460,92 @@ export const analyzeCode = async (
 
   const prompt = buildPrompt(code, language);
   let lastError: AIServiceError | null = null;
-  let networkRetries = 0;
+  for (const { name, provider } of providers) {
+    let networkRetries = 0;
 
-  while (true) {
-    try {
-      const rawText = await callGeminiWithRateLimit(
-        provider,
-        prompt,
-        cacheKey,
-        language
-      );
-      const result = parseAndNormalizeAnalysis(rawText);
-      const ttlMinutes = isFallbackResult(result)
-        ? FALLBACK_TTL_MINUTES
-        : VALID_TTL_MINUTES;
+    while (true) {
+      try {
+        const rawText = await callProviderWithRateLimit(
+          name,
+          provider,
+          prompt,
+          cacheKey,
+          language
+        );
+        const result = parseAndNormalizeAnalysis(rawText);
+        const ttlMinutes = isFallbackResult(result)
+          ? FALLBACK_TTL_MINUTES
+          : VALID_TTL_MINUTES;
 
-      activeCache.set(cacheKey, result, ttlMinutes);
-      setLocalCache(cacheKey, result, ttlMinutes);
-      logger.info("analysis.cache.set", {
-        cache_key: cacheKey,
-        language,
-        prompt_version: PROMPT_VERSION,
-        ttl_minutes: ttlMinutes,
-      });
-      logger.info("analysis.success", {
-        source: "gemini",
-        cache_key: cacheKey,
-        language,
-      });
-
-      return {
-        ...result,
-        source: "gemini",
-      };
-    } catch (error: any) {
-      lastError =
-        error instanceof AIServiceError
-          ? error
-          : new AIServiceError(
-              "AI_PROVIDER_ERROR",
-              error.message || "Unknown AI provider failure"
-            );
-
-      if (isRateLimitedError(lastError)) {
-        const delay = extractRetryDelay(lastError.message);
-        isRateLimited = true;
-        rateLimitResetTime = Date.now() + delay;
-        logger.warn("analysis.cooldown_enabled", {
+        activeCache.set(cacheKey, result, ttlMinutes);
+        setLocalCache(cacheKey, result, ttlMinutes);
+        logger.info("analysis.cache.set", {
           cache_key: cacheKey,
           language,
-          delay,
+          prompt_version: PROMPT_VERSION,
+          ttl_minutes: ttlMinutes,
         });
-        logger.warn("analysis.cooldown_active", {
+        logger.info("analysis.success", {
+          source: name,
           cache_key: cacheKey,
           language,
-          reset_time: rateLimitResetTime,
+        });
+
+        return {
+          ...result,
+          source: name,
+        };
+      } catch (error: any) {
+        lastError =
+          error instanceof AIServiceError
+            ? error
+            : new AIServiceError(
+                "AI_PROVIDER_ERROR",
+                error.message || "Unknown AI provider failure"
+              );
+
+        if (isRateLimitedError(lastError)) {
+          logger.warn("analysis.provider_failed", {
+            provider: name,
+            cache_key: cacheKey,
+            language,
+            reason: lastError.code,
+            status: lastError.status,
+          });
+          logger.warn("analysis.cooldown_active", {
+            provider: name,
+            cache_key: cacheKey,
+            language,
+            reset_time: providerCooldowns[name].resetTime,
+          });
+          break;
+        }
+
+        if (
+          lastError.code === "AI_NETWORK_ERROR" &&
+          networkRetries < MAX_NETWORK_RETRIES
+        ) {
+          const delay = 1000 * 2 ** networkRetries;
+          logger.warn("analysis.retry", {
+            provider: name,
+            attempt: networkRetries + 1,
+            delay,
+            reason: lastError.code,
+          });
+          networkRetries += 1;
+          await sleep(delay);
+          continue;
+        }
+
+        logger.warn("analysis.provider_failed", {
+          provider: name,
+          cache_key: cacheKey,
+          language,
+          reason: lastError.code,
+          status: lastError.status,
         });
         break;
       }
-
-      if (
-        lastError.code === "AI_NETWORK_ERROR" &&
-        networkRetries < MAX_NETWORK_RETRIES
-      ) {
-        const delay = 1000 * 2 ** networkRetries;
-        logger.warn("analysis.retry", {
-          attempt: networkRetries + 1,
-          delay,
-          reason: lastError.code,
-        });
-        networkRetries += 1;
-        await sleep(delay);
-        continue;
-      }
-
-      break;
     }
   }
 
