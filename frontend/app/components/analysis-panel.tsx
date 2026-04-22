@@ -68,7 +68,7 @@ export default function AnalysisPanel({
 
         <section>
           <h4 className="text-xs uppercase tracking-[0.18em] text-gray-500 mb-2">
-            Pseudo Algorithm
+            Algorithm
           </h4>
           <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3 font-mono text-xs text-sky-300">
             {analysis.algorithm_steps.length > 0 ? (

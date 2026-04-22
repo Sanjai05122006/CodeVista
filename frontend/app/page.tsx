@@ -14,7 +14,7 @@ type AnalysisData = {
     worst: string;
   };
   space_complexity: string;
-  source: "cache" | "gemini";
+  source: "cache" | "gemini" | "groq";
 };
 
 const Editor = dynamic(() => import("@monaco-editor/react"), {
