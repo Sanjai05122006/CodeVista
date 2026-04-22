@@ -62,6 +62,11 @@ Thumbs.db
 coverage/
 
 # =========================
+# Typescript (Typescript to Javascript-Compiled Code)
+# =========================
+dist/
+
+# =========================
 # MISC
 # =========================
 *.log
