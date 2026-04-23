@@ -1,4 +1,5 @@
 import { executeJudge0 } from "../integrations/judge0";
+import { executePiston } from "../integrations/piston";
 import { cacheService } from "./cache.service";
 
 export const executeCode = async (code: string, language: string) => {
@@ -40,20 +41,38 @@ export const executeCode = async (code: string, language: string) => {
 
   //If all attempts fail → graceful error response
   if (!result) {
-    console.error(`[EXECUTION FAILED] ${lastError?.message}`);
+    console.warn(`[JUDGE0 FAILED] ${lastError?.message}`);
 
-    return {
-      stdout: "",
-      stderr: "",
-      runtime_ms: 0,
-      memory_kb: 0,
-      status: "Service Unavailable",
-      error: {
-        code: "EXECUTION_SERVICE_UNAVAILABLE",
-        message: "Execution service is temporarily unavailable",
-      },
-      source: "system",
-    };
+    try {
+      const pistonResult = await executePiston(code, language);
+
+      result = {
+        ...formatPistonResponse(pistonResult),
+        source: "piston",
+      };
+
+      console.log(`[PISTON] ✅ Success`);
+    } catch (pistonError) {
+      const typedError =
+        pistonError instanceof Error
+          ? pistonError
+          : new Error("Piston execution failed");
+
+      console.error(`[EXECUTION FAILED] ${typedError.message}`);
+
+      return {
+        stdout: "",
+        stderr: "",
+        runtime_ms: 0,
+        memory_kb: 0,
+        status: "Service Unavailable",
+        error: {
+          code: "EXECUTION_SERVICE_UNAVAILABLE",
+          message: "Execution service is temporarily unavailable",
+        },
+        source: "system",
+      };
+    }
   }
 
   // ✅ Cache only successful results
@@ -74,5 +93,17 @@ function formatResponse(judge0Result: any) {
     runtime_ms: Number(judge0Result.time) * 1000 || 0,
     memory_kb: judge0Result.memory || 0,
     status: judge0Result.status?.description || "Unknown",
+  };
+}
+
+function formatPistonResponse(pistonResult: any) {
+  const run = pistonResult?.run ?? {};
+
+  return {
+    stdout: run.stdout || "",
+    stderr: run.stderr || "",
+    runtime_ms: Math.round((Number(run.time) || 0) * 1000),
+    memory_kb: Math.round((Number(run.memory) || 0) / 1024),
+    status: run.code === 0 ? "Accepted" : "Runtime Error",
   };
 }
