@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { AuthProvider } from "@/lib/auth-context";
 
 export const metadata: Metadata = {
   title: "CodeVista",
@@ -14,7 +15,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="h-full">
-        <div className="min-h-full">{children}</div>
+        <AuthProvider>
+          <div className="min-h-full">{children}</div>
+        </AuthProvider>
       </body>
     </html>
   );
