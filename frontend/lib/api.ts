@@ -31,9 +31,10 @@ export type SaveSessionPayload = {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-const normalizeApiBaseUrl = (rawBaseUrl: string) => rawBaseUrl.replace(/\/+$/, "");
+export const normalizeApiBaseUrl = (rawBaseUrl: string) =>
+  rawBaseUrl.replace(/\/+$/, "");
 
-const buildApiUrl = (path: string) => {
+export const buildApiUrl = (path: string) => {
   const baseUrl = normalizeApiBaseUrl(API_BASE_URL);
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
