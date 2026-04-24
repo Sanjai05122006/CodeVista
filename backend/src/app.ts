@@ -41,6 +41,8 @@ app.get("/", (req, res) => {
       "GET /api/languages",
       "POST /api/session/save",
       "GET /api/session/history",
+      "POST /api/chat",
+      "POST /api/chat/batch",
     ],
   });
 });

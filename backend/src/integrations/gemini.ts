@@ -75,6 +75,7 @@ export const generateGeminiAnalysis = async (
       error.response?.data?.error?.message ||
       error.message ||
       "Gemini request failed";
+    const isClientError = typeof status === "number" && status >= 400 && status < 500;
 
     logger.error("gemini.response.failed", {
       provider: "gemini",
@@ -86,7 +87,11 @@ export const generateGeminiAnalysis = async (
     });
 
     throw new AIServiceError(
-      isTimeout ? "AI_TIMEOUT_ERROR" : "AI_NETWORK_ERROR",
+      isTimeout
+        ? "AI_TIMEOUT_ERROR"
+        : isClientError
+        ? "AI_PROVIDER_ERROR"
+        : "AI_NETWORK_ERROR",
       status ? `status ${status}: ${message}` : message,
       status || 502
     );
