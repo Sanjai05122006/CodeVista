@@ -4,7 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { LogIn } from "lucide-react";
 import AnalysisPanel from "../../components/analysis-panel";
+import ChatContainer from "@/components/chat/ChatContainer";
 import { useAuth } from "@/lib/auth-context";
 import { useSessionBuffer } from "@/hooks/useSessionBuffer";
 
@@ -49,18 +51,42 @@ export default function EditorPage() {
   const [activeTab, setActiveTab] = useState<"output" | "analysis">("output");
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-  const { appendExecution, flush, saveError } = useSessionBuffer(accessToken);
+  const [chatThreadId, setChatThreadId] = useState("");
+  const { appendExecution, flush, saveError, sessionId } =
+    useSessionBuffer(accessToken);
 
   useEffect(() => {
-    if (!authLoading && !session) {
-      router.replace("/login");
+    if (typeof window === "undefined") {
+      return;
     }
-  }, [authLoading, router, session]);
+
+    const existingThreadId = window.localStorage.getItem(
+      "codevista.editor.chatThreadId"
+    );
+    const nextThreadId = existingThreadId || crypto.randomUUID();
+
+    if (!existingThreadId) {
+      window.localStorage.setItem("codevista.editor.chatThreadId", nextThreadId);
+    }
+
+    setChatThreadId(nextThreadId);
+  }, []);
 
   const derivedTitle = useMemo(() => {
     const firstLine = code.split("\n").find((line) => line.trim().length > 0);
     return firstLine ? firstLine.trim().slice(0, 80) : "Untitled session";
   }, [code]);
+
+  const chatContext = useMemo(
+    () => ({
+      title: derivedTitle,
+      language,
+      code,
+      analysis,
+      execution: result,
+    }),
+    [analysis, code, derivedTitle, language, result]
+  );
 
   useEffect(() => {
     return () => {
@@ -159,7 +185,7 @@ export default function EditorPage() {
     }
   };
 
-  if (authLoading || !session) {
+  if (authLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#020617] text-sm text-gray-400">
         Loading workspace...
@@ -174,7 +200,7 @@ export default function EditorPage() {
           <div>
             <h1 className="text-lg font-semibold text-indigo-400">CodeVista</h1>
             <p className="text-[11px] text-gray-400">
-              Interactive Code Workspace
+              {session ? "Interactive Code Workspace" : "Interactive Code Workspace · Guest mode"}
             </p>
           </div>
 
@@ -182,16 +208,27 @@ export default function EditorPage() {
             <span className="text-[10px] text-gray-500 uppercase">
               {language}
             </span>
-            <button
-              type="button"
-              onClick={async () => {
-                await signOut();
-                router.replace("/");
-              }}
-              className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-gray-300 transition hover:bg-white/5"
-            >
-              Sign out
-            </button>
+            {session ? (
+              <button
+                type="button"
+                onClick={async () => {
+                  await signOut();
+                  router.replace("/");
+                }}
+                className="rounded-md border border-white/10 px-3 py-1.5 text-xs text-gray-300 transition hover:bg-white/5"
+              >
+                Sign out
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => router.push("/login")}
+                className="inline-flex items-center gap-2 rounded-md border border-indigo-400/20 bg-indigo-500/10 px-3 py-1.5 text-xs text-indigo-200 transition hover:bg-indigo-500/20"
+              >
+                <LogIn className="h-3.5 w-3.5" />
+                Sign in
+              </button>
+            )}
           </div>
         </div>
 
@@ -370,6 +407,16 @@ export default function EditorPage() {
           </div>
         </div>
       </div>
+
+      {chatThreadId ? (
+        <ChatContainer
+          threadId={chatThreadId}
+          title={derivedTitle}
+          sessionId={sessionId}
+          accessToken={accessToken}
+          context={chatContext}
+        />
+      ) : null}
     </div>
   );
 }
