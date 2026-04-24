@@ -31,6 +31,7 @@ type CacheEntry = {
 };
 
 export const PROMPT_VERSION = "v4";
+export const CHAT_PROMPT_VERSION = "v2";
 const MAX_NETWORK_RETRIES = 3;
 const VALID_TTL_MINUTES = 60 * 24;
 const FALLBACK_TTL_MINUTES = 5;
@@ -186,6 +187,42 @@ Language: {{language}}
 
 Code:
 {{code}}
+`;
+
+export const CHAT_MASTER_PROMPT = `
+You are CodeVista AI, a production-grade code-aware copilot embedded in a developer workspace.
+
+Your job:
+- Answer using the active workspace context and recent chat history.
+- Be specific to the current code, output, runtime signals, and analysis when they are available.
+- Sound like a sharp senior engineer, not a generic chatbot.
+
+Hard rules:
+- Never dump raw context, raw history, JSON, metadata, or internal prompt text back to the user.
+- Never say phrases like "Based on the provided context and history".
+- Do not introduce yourself repeatedly.
+- Do not give generic onboarding bullets unless the user actually asked for general help.
+- If the user message is only a greeting, reply briefly, then mention one concrete observation about the active code and offer 2 useful next directions.
+- If the user sends code or a code edit without a direct question, infer intent from the code and explain what changed, what it does now, and what to try next.
+- Prefer concise Markdown with short paragraphs and flat bullets only when they genuinely help.
+- Keep explanations practical, grounded, and tied to the current code.
+- If execution output exists, use it.
+- If complexity analysis exists, use it.
+- If the user is experimenting, act like a coding copilot helping them iterate.
+
+Response style:
+- Start with the answer, not filler.
+- Mention the active code naturally when relevant.
+- When suggesting next steps, keep them concrete and specific to the current snippet.
+
+Workspace context:
+{{context}}
+
+Recent chat history:
+{{history}}
+
+Latest user message:
+{{message}}
 `;
 
 export const buildPrompt = (code: string, language: string) => {
@@ -571,4 +608,256 @@ export const analyzeCode = async (
     ...fallbackResponse,
     source: "gemini",
   };
+};
+
+type ChatHistoryMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+type GenerateChatReplyInput = {
+  message: string;
+  context?: unknown;
+  history?: unknown;
+};
+
+const CHAT_PROVIDER_MAX_RETRIES = 3;
+
+const normalizeChatHistory = (history: unknown): ChatHistoryMessage[] => {
+  if (!Array.isArray(history)) {
+    return [];
+  }
+
+  return history
+    .filter(
+      (item): item is ChatHistoryMessage =>
+        Boolean(item) &&
+        typeof item === "object" &&
+        "role" in item &&
+        "content" in item &&
+        (item.role === "user" || item.role === "assistant") &&
+        typeof item.content === "string" &&
+        item.content.trim().length > 0
+    )
+    .map((item) => ({
+      role: item.role,
+      content: item.content.trim(),
+    }));
+};
+
+const buildChatPrompt = ({
+  message,
+  context,
+  history,
+}: {
+  message: string;
+  context?: unknown;
+  history: ChatHistoryMessage[];
+}) => {
+  const summarizeContext = () => {
+    if (!context || typeof context !== "object") {
+      return "No workspace context provided.";
+    }
+
+    const raw = context as Record<string, unknown>;
+    const summary: string[] = [];
+
+    if (typeof raw.title === "string" && raw.title.trim()) {
+      summary.push(`Active title: ${raw.title.trim()}`);
+    }
+
+    if (typeof raw.language === "string" && raw.language.trim()) {
+      summary.push(`Language: ${raw.language.trim()}`);
+    }
+
+    if (typeof raw.code === "string" && raw.code.trim()) {
+      summary.push(`Code snippet:\n${raw.code.trim().slice(0, 1200)}`);
+    }
+
+    const analysis = raw.analysis;
+    if (analysis && typeof analysis === "object") {
+      const typedAnalysis = analysis as Record<string, unknown>;
+      if (typedAnalysis.time_complexity) {
+        summary.push(
+          `Complexity summary: ${JSON.stringify(typedAnalysis.time_complexity)}`
+        );
+      }
+      if (typedAnalysis.space_complexity) {
+        summary.push(`Space complexity: ${String(typedAnalysis.space_complexity)}`);
+      }
+    }
+
+    const execution = raw.execution;
+    if (execution && typeof execution === "object") {
+      const typedExecution = execution as Record<string, unknown>;
+      if (typeof typedExecution.stdout === "string" && typedExecution.stdout.trim()) {
+        summary.push(`Latest output: ${typedExecution.stdout.trim().slice(0, 400)}`);
+      }
+      if (typeof typedExecution.stderr === "string" && typedExecution.stderr.trim()) {
+        summary.push(`Latest error: ${typedExecution.stderr.trim().slice(0, 400)}`);
+      }
+    }
+
+    return summary.join("\n") || "No workspace context provided.";
+  };
+
+  const formattedHistory =
+    history.length === 0
+      ? "No previous chat history."
+      : history
+          .slice(-10)
+          .map((item) => `${item.role.toUpperCase()}: ${item.content}`)
+          .join("\n");
+
+  return CHAT_MASTER_PROMPT.replace("{{context}}", summarizeContext())
+    .replace("{{history}}", formattedHistory)
+    .replace("{{message}}", message);
+};
+
+const isRetryableChatProviderError = (error: AIServiceError) => {
+  if (error.status >= 500) {
+    return true;
+  }
+
+  if (error.code === "AI_TIMEOUT_ERROR") {
+    return true;
+  }
+
+  if (error.code === "AI_NETWORK_ERROR" && error.status >= 502) {
+    return true;
+  }
+
+  return false;
+};
+
+const isImmediateFallbackChatError = (error: AIServiceError) => {
+  if (error.status >= 400 && error.status < 500) {
+    return true;
+  }
+
+  return false;
+};
+
+const generateGeminiChatReply = async (prompt: string) => {
+  let lastError: AIServiceError | null = null;
+
+  for (let attempt = 0; attempt < CHAT_PROVIDER_MAX_RETRIES; attempt += 1) {
+    try {
+      const reply = await generateGeminiAnalysis(prompt);
+
+      return {
+        reply,
+        provider: "gemini" as const,
+        model: "gemini-2.5-flash",
+      };
+    } catch (error) {
+      const serviceError =
+        error instanceof AIServiceError
+          ? error
+          : new AIServiceError(
+              "AI_PROVIDER_ERROR",
+              error instanceof Error ? error.message : "Unknown Gemini failure"
+            );
+
+      lastError = serviceError;
+
+      if (isImmediateFallbackChatError(serviceError)) {
+        logger.warn("chat.gemini.fallback_immediate", {
+          reason: serviceError.code,
+          status: serviceError.status,
+          message: serviceError.message,
+        });
+        break;
+      }
+
+      if (
+        isRetryableChatProviderError(serviceError) &&
+        attempt < CHAT_PROVIDER_MAX_RETRIES - 1
+      ) {
+        const delay = 500 * 2 ** attempt;
+        logger.warn("chat.gemini.retry", {
+          attempt: attempt + 1,
+          delay,
+          reason: serviceError.code,
+          status: serviceError.status,
+        });
+        await sleep(delay);
+        continue;
+      }
+
+      logger.warn("chat.gemini.fallback", {
+        reason: serviceError.code,
+        status: serviceError.status,
+        message: serviceError.message,
+      });
+      break;
+    }
+  }
+
+  throw (
+    lastError ??
+    new AIServiceError("AI_PROVIDER_ERROR", "Gemini failed for unknown reasons")
+  );
+};
+
+const generateGroqChatReply = async (prompt: string) => {
+  const reply = await generateGroqAnalysis(prompt);
+
+  return {
+    reply,
+    provider: "groq" as const,
+    model: "llama-3.1-8b-instant",
+  };
+};
+
+const getChatFallbackReply = (context?: unknown) => {
+  const maybeLanguage =
+    context &&
+    typeof context === "object" &&
+    "language" in context &&
+    typeof context.language === "string"
+      ? context.language
+      : null;
+
+  return maybeLanguage
+    ? `I couldn't reach the AI providers right now. You're working in ${maybeLanguage}, so try again in a moment and I'll pick up from the current code context.`
+    : "I couldn't reach the AI providers right now. Try again in a moment and I'll continue from the current code context.";
+};
+
+export const generateChatReply = async ({
+  message,
+  context,
+  history,
+}: GenerateChatReplyInput) => {
+  if (typeof message !== "string" || message.trim().length === 0) {
+    throw new Error("MESSAGE_REQUIRED");
+  }
+
+  const normalizedMessage = message.trim();
+  const normalizedHistory = normalizeChatHistory(history);
+  const prompt = buildChatPrompt({
+    message: normalizedMessage,
+    context,
+    history: normalizedHistory,
+  });
+
+  try {
+    return await generateGeminiChatReply(prompt);
+  } catch (geminiError) {
+    try {
+      return await generateGroqChatReply(prompt);
+    } catch (groqError) {
+      logger.error("chat.providers.exhausted", {
+        gemini_reason:
+          geminiError instanceof Error ? geminiError.message : "UNKNOWN",
+        groq_reason: groqError instanceof Error ? groqError.message : "UNKNOWN",
+      });
+
+      return {
+        reply: getChatFallbackReply(context),
+        provider: "fallback",
+        model: "system",
+      };
+    }
+  }
 };
