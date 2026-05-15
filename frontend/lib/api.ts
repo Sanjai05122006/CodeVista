@@ -28,6 +28,61 @@ export type SaveSessionPayload = {
   executions: BufferedExecution[];
 };
 
+export type SessionExecutionDetail = {
+  id: string;
+  session_id: string;
+  code: string;
+  language: string;
+  created_at: string | null;
+  updated_at: string | null;
+  output: {
+    stdout: string;
+    stderr: string;
+    runtime_ms: number;
+    memory_kb: number;
+  };
+  analysis: {
+    pseudocode: string[];
+    algorithm_steps: string[];
+    time_complexity: {
+      best?: string;
+      average?: string;
+      worst?: string;
+    };
+    space_complexity: string;
+    explanation: string;
+    execution_trace: unknown[];
+  } | null;
+};
+
+export type SessionChatMessageDetail = {
+  id: string;
+  thread_id: string;
+  role: "user" | "assistant";
+  content: string;
+  sequence: number;
+  provider?: string | null;
+  model?: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SessionDetail = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+  executions: SessionExecutionDetail[];
+  chat: {
+    thread_id: string;
+    title: string | null;
+    session_id: string;
+    updated_at: string | null;
+    messages: SessionChatMessageDetail[];
+  } | null;
+};
+
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
@@ -134,6 +189,9 @@ export async function fetchSessionHistory(
       id: string;
       title: string | null;
       created_at: string;
+      updated_at: string;
+      language: string | null;
+      execution_count: number;
     }>;
   }>(`/session/history${query ? `?${query}` : ""}`, accessToken, {
     method: "GET",
@@ -141,7 +199,7 @@ export async function fetchSessionHistory(
 }
 
 export async function fetchSessionDetail(sessionId: string, accessToken: string) {
-  return authorizedJsonFetch(`/session/${sessionId}`, accessToken, {
+  return authorizedJsonFetch<SessionDetail>(`/session/${sessionId}`, accessToken, {
     method: "GET",
   });
 }

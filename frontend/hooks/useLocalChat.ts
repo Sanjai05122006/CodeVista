@@ -16,6 +16,15 @@ const CHAT_STORAGE_PREFIX = "codevista_chat:";
 
 const getStorageKey = (threadId: string) => `${CHAT_STORAGE_PREFIX}${threadId}`;
 
+export const setStoredThreadId = (threadId: string) => {
+  if (typeof window === "undefined" || !threadId) {
+    return;
+  }
+
+  window.sessionStorage.setItem(THREAD_ID_STORAGE_KEY, threadId);
+  window.localStorage.removeItem(THREAD_ID_STORAGE_KEY);
+};
+
 export const clearStoredChatState = () => {
   if (typeof window === "undefined") {
     return;

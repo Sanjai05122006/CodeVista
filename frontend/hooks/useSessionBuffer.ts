@@ -113,6 +113,22 @@ export function useSessionBuffer(accessToken: string | null) {
     setSaveError(null);
   }, [clearTimer]);
 
+  const hydrateSession = useCallback((input: {
+    sessionId: string;
+    title?: string | null;
+    startedAt?: string;
+    executions: BufferedExecution[];
+  }) => {
+    clearTimer();
+    setState({
+      sessionId: input.sessionId,
+      title: input.title ?? undefined,
+      startedAt: input.startedAt ?? new Date().toISOString(),
+      executions: input.executions,
+    });
+    setSaveError(null);
+  }, [clearTimer]);
+
   useEffect(() => {
     const handleBeforeUnload = () => {
       clearTimer();
@@ -156,10 +172,11 @@ export function useSessionBuffer(accessToken: string | null) {
       executions: state.executions,
       appendExecution,
       flush,
+      hydrateSession,
       resetBuffer,
       saving,
       saveError,
     }),
-    [appendExecution, flush, resetBuffer, saveError, saving, state]
+    [appendExecution, flush, hydrateSession, resetBuffer, saveError, saving, state]
   );
 }

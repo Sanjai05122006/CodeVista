@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "../config/db";
+import { db, supabaseAdmin } from "../config/db";
 import { AppError } from "../middleware/error.middleware";
 
 /* =========================
@@ -32,6 +32,47 @@ type SaveSessionInput = {
   sessionId?: string;
   title?: string;
   executions: ExecutionInput[];
+};
+
+type SessionRecord = {
+  id: string;
+  user_id: string;
+  title: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+type ExecutionRecord = {
+  id: string;
+  session_id: string;
+  code: string;
+  language: string;
+  created_at?: string;
+  updated_at?: string;
+};
+
+type ExecutionResultRecord = {
+  execution_id: string;
+  stdout: string | null;
+  stderr: string | null;
+  runtime_ms: number | null;
+  memory_kb: number | null;
+};
+
+type AIOutputRecord = {
+  execution_id: string;
+  pseudocode: string | null;
+  algorithm_steps: string[] | null;
+  time_complexity:
+    | {
+        best?: string;
+        average?: string;
+        worst?: string;
+      }
+    | null;
+  space_complexity: string | null;
+  explanation: string | null;
+  execution_trace: unknown[] | null;
 };
 
 /* =========================
@@ -167,7 +208,7 @@ export const getSessionHistory = async (
 ) => {
   const { data, error } = await supabaseAdmin
     .from("sessions")
-    .select("id, title, created_at")
+    .select("id, title, created_at, updated_at")
     .eq("user_id", userId)
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);
@@ -176,7 +217,58 @@ export const getSessionHistory = async (
     throw new Error(`HISTORY_FETCH_FAILED: ${error.message}`);
   }
 
-  return data ?? [];
+  const sessions = data ?? [];
+
+  if (sessions.length === 0) {
+    return [];
+  }
+
+  const sessionIds = sessions.map((session) => session.id);
+  const { data: executions, error: executionsError } = await supabaseAdmin
+    .from("executions")
+    .select("id, session_id, language, created_at")
+    .in("session_id", sessionIds);
+
+  if (executionsError) {
+    throw new Error(`HISTORY_EXECUTIONS_FETCH_FAILED: ${executionsError.message}`);
+  }
+
+  const executionMap = new Map<
+    string,
+    { language: string | null; execution_count: number; created_at: string | null }
+  >();
+
+  for (const execution of executions ?? []) {
+    const existing = executionMap.get(execution.session_id);
+
+    if (!existing) {
+      executionMap.set(execution.session_id, {
+        language: execution.language ?? null,
+        execution_count: 1,
+        created_at: execution.created_at ?? null,
+      });
+      continue;
+    }
+
+    existing.execution_count += 1;
+
+    const existingCreatedAt = existing.created_at ?? "";
+    const nextCreatedAt = execution.created_at ?? "";
+    if (nextCreatedAt > existingCreatedAt) {
+      existing.language = execution.language ?? existing.language;
+      existing.created_at = execution.created_at ?? existing.created_at;
+    }
+  }
+
+  return sessions.map((session) => {
+    const executionMeta = executionMap.get(session.id);
+
+    return {
+      ...session,
+      language: executionMeta?.language ?? null,
+      execution_count: executionMeta?.execution_count ?? 0,
+    };
+  });
 };
 
 /* =========================
@@ -198,14 +290,161 @@ export const getSessionDetail = async (
     throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
   }
 
-  const { data: executions } = await supabaseAdmin
+  const { data: executions, error: executionsError } = await supabaseAdmin
     .from("executions")
     .select("*")
-    .eq("session_id", sessionId);
+    .eq("session_id", sessionId)
+    .order("created_at", { ascending: true });
+
+  if (executionsError) {
+    throw new AppError(
+      "SESSION_DETAIL_FAILED",
+      500,
+      `EXECUTIONS_FETCH_FAILED: ${executionsError.message}`
+    );
+  }
+
+  const typedExecutions = (executions ?? []) as ExecutionRecord[];
+  const executionIds = typedExecutions.map((execution) => execution.id);
+
+  const [{ data: executionResults, error: executionResultsError }, { data: aiOutputs, error: aiOutputsError }] =
+    executionIds.length > 0
+      ? await Promise.all([
+          supabaseAdmin
+            .from("execution_results")
+            .select("*")
+            .in("execution_id", executionIds),
+          supabaseAdmin.from("ai_outputs").select("*").in("execution_id", executionIds),
+        ])
+      : [
+          { data: [], error: null as null },
+          { data: [], error: null as null },
+        ];
+
+  if (executionResultsError) {
+    throw new AppError(
+      "SESSION_DETAIL_FAILED",
+      500,
+      `EXECUTION_RESULTS_FETCH_FAILED: ${executionResultsError.message}`
+    );
+  }
+
+  if (aiOutputsError) {
+    throw new AppError(
+      "SESSION_DETAIL_FAILED",
+      500,
+      `AI_OUTPUTS_FETCH_FAILED: ${aiOutputsError.message}`
+    );
+  }
+
+  const executionResultsByExecutionId = new Map(
+    ((executionResults ?? []) as ExecutionResultRecord[]).map((row) => [
+      row.execution_id,
+      row,
+    ])
+  );
+
+  const aiOutputsByExecutionId = new Map(
+    ((aiOutputs ?? []) as AIOutputRecord[]).map((row) => [row.execution_id, row])
+  );
+
+  const normalizedExecutions = typedExecutions.map((execution) => {
+    const result = executionResultsByExecutionId.get(execution.id);
+    const ai = aiOutputsByExecutionId.get(execution.id);
+
+    return {
+      id: execution.id,
+      session_id: execution.session_id,
+      code: execution.code,
+      language: execution.language,
+      created_at: execution.created_at ?? null,
+      updated_at: execution.updated_at ?? null,
+      output: {
+        stdout: result?.stdout ?? "",
+        stderr: result?.stderr ?? "",
+        runtime_ms: result?.runtime_ms ?? 0,
+        memory_kb: result?.memory_kb ?? 0,
+      },
+      analysis: ai
+        ? {
+            pseudocode: ai.pseudocode
+              ? ai.pseudocode
+                  .split("\n")
+                  .map((line) => line.trim())
+                  .filter(Boolean)
+              : [],
+            algorithm_steps: Array.isArray(ai.algorithm_steps)
+              ? ai.algorithm_steps
+              : [],
+            time_complexity: ai.time_complexity ?? {
+              best: "",
+              average: "",
+              worst: "",
+            },
+            space_complexity: ai.space_complexity ?? "",
+            explanation: ai.explanation ?? "",
+            execution_trace: Array.isArray(ai.execution_trace)
+              ? ai.execution_trace
+              : [],
+          }
+        : null,
+    };
+  });
+
+  const { rows: threadRows } = await db.query(
+    `SELECT id, title, session_id, updated_at
+     FROM chat_threads
+     WHERE session_id = $1 AND user_id = $2
+     ORDER BY updated_at DESC
+     LIMIT 1`,
+    [sessionId, userId]
+  );
+
+  const activeThread = threadRows[0] ?? null;
+  let chatMessages: Array<{
+    id: string;
+    thread_id: string;
+    role: "user" | "assistant";
+    content: string;
+    sequence: number;
+    provider: string | null;
+    model: string | null;
+    created_at: string;
+    updated_at: string;
+  }> = [];
+
+  if (activeThread) {
+    const { rows } = await db.query(
+      `SELECT id,
+              thread_id,
+              role,
+              content,
+              sequence,
+              provider,
+              model,
+              created_at,
+              updated_at
+       FROM chat_messages
+       WHERE thread_id = $1
+       ORDER BY sequence ASC`,
+      [activeThread.id]
+    );
+
+    chatMessages = rows;
+  }
 
   return {
-    ...session,
-    executions: executions ?? [],
+    ...(session as SessionRecord),
+    executions: normalizedExecutions,
+    chat: activeThread
+      ? {
+          thread_id: activeThread.id,
+          title: activeThread.title ?? null,
+          session_id: activeThread.session_id ?? sessionId,
+          updated_at: activeThread.updated_at ?? null,
+          messages: chatMessages,
+        }
+      : null,
   };
 };
 

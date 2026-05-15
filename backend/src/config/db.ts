@@ -40,9 +40,12 @@ const lookupWithDnsFallback = (
 
 export const db = new Pool({
   connectionString: env.DATABASE_URL,
-  ssl: env.DATABASE_URL.includes("supabase.co")
-    ? { rejectUnauthorized: false }
-    : undefined,
+  ssl:
+    env.DATABASE_URL.includes("supabase.co") ||
+    env.DATABASE_URL.includes("supabase.com") ||
+    /sslmode=require/i.test(env.DATABASE_URL)
+      ? { rejectUnauthorized: false }
+      : undefined,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   connectionTimeoutMillis: 10000,

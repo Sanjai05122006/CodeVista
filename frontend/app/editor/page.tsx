@@ -1,15 +1,21 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import type * as Monaco from "monaco-editor";
 import { AnimatePresence, motion } from "framer-motion";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn } from "lucide-react";
 import AnalysisPanel from "../../components/analysis-panel";
 import ChatContainer from "@/components/chat/ChatContainer";
+import {
+  fetchSessionDetail,
+  type BufferedExecution,
+  type SessionDetail,
+} from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useSessionBuffer } from "@/hooks/useSessionBuffer";
-import { getStoredThreadId } from "@/hooks/useLocalChat";
+import { getStoredThreadId, setStoredThreadId } from "@/hooks/useLocalChat";
 
 type AnalysisData = {
   pseudocode: string[];
@@ -33,6 +39,15 @@ type ExecutionData = {
   };
 };
 
+type TraceStep = {
+  step: number;
+  line_number?: number | null;
+  event_type?: string | null;
+  variables?: Record<string, unknown> | null;
+  call_stack?: string[] | null;
+  return_value?: unknown;
+};
+
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
 });
@@ -40,8 +55,9 @@ const Editor = dynamic(() => import("@monaco-editor/react"), {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
-export default function EditorPage() {
+function EditorWorkspace() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { accessToken, loading: authLoading, session, signOut } = useAuth();
   const [code, setCode] = useState("console.log(2+3)");
   const [language, setLanguage] = useState("javascript");
@@ -53,13 +69,56 @@ export default function EditorPage() {
   const [executionError, setExecutionError] = useState<string | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [chatThreadId, setChatThreadId] = useState("");
-  const { appendExecution, flush, saveError, sessionId } =
+  const [restoringSession, setRestoringSession] = useState(false);
+  const [restoredSessionTitle, setRestoredSessionTitle] = useState<string | null>(null);
+  const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
+  const [traceIndex, setTraceIndex] = useState(0);
+  const [isTracePlaying, setIsTracePlaying] = useState(false);
+  const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
+  const monacoRef = useRef<typeof Monaco | null>(null);
+  const decorationIdsRef = useRef<string[]>([]);
+  const { appendExecution, flush, hydrateSession, saveError, sessionId } =
     useSessionBuffer(accessToken);
+  const requestedSessionId = searchParams.get("sessionId");
+  const activeRestoredSessionTitle = requestedSessionId ? restoredSessionTitle : null;
+
+  const normalizeTrace = (trace: unknown): TraceStep[] => {
+    if (!Array.isArray(trace)) {
+      return [];
+    }
+
+    return trace
+      .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+      .map((item, index) => ({
+        step:
+          typeof item.step === "number" && Number.isFinite(item.step)
+            ? item.step
+            : index + 1,
+        line_number:
+          typeof item.line_number === "number" && Number.isFinite(item.line_number)
+            ? item.line_number
+            : null,
+        event_type:
+          typeof item.event_type === "string" ? item.event_type : null,
+        variables:
+          item.variables && typeof item.variables === "object" && !Array.isArray(item.variables)
+            ? (item.variables as Record<string, unknown>)
+            : null,
+        call_stack: Array.isArray(item.call_stack)
+          ? item.call_stack.filter((entry): entry is string => typeof entry === "string")
+          : null,
+        return_value: "return_value" in item ? item.return_value : null,
+      }));
+  };
 
   const derivedTitle = useMemo(() => {
+    if (activeRestoredSessionTitle) {
+      return activeRestoredSessionTitle;
+    }
+
     const firstLine = code.split("\n").find((line) => line.trim().length > 0);
     return firstLine ? firstLine.trim().slice(0, 80) : "Untitled session";
-  }, [code]);
+  }, [activeRestoredSessionTitle, code]);
 
   const chatContext = useMemo(
     () => ({
@@ -71,17 +130,199 @@ export default function EditorPage() {
     }),
     [analysis, code, derivedTitle, language, result]
   );
+  const currentTraceStep = traceSteps[traceIndex] ?? null;
+  const traceVariables = currentTraceStep?.variables
+    ? Object.entries(currentTraceStep.variables)
+    : [];
 
   useEffect(() => {
+    if (requestedSessionId && accessToken) {
+      return;
+    }
+
     const timer = window.setTimeout(() => {
-      setChatThreadId(getStoredThreadId());
+      const threadId = getStoredThreadId();
+      setStoredThreadId(threadId);
+      setChatThreadId(threadId);
     }, 0);
 
     return () => {
       window.clearTimeout(timer);
       void flush();
     };
-  }, [flush]);
+  }, [accessToken, flush, requestedSessionId]);
+
+  useEffect(() => {
+    if (!isTracePlaying || traceSteps.length <= 1) {
+      return;
+    }
+
+    const timer = window.setInterval(() => {
+      setTraceIndex((current) => {
+        if (current >= traceSteps.length - 1) {
+          setIsTracePlaying(false);
+          return current;
+        }
+
+        return current + 1;
+      });
+    }, 800);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [isTracePlaying, traceSteps.length]);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const monaco = monacoRef.current;
+
+    if (!editor || !monaco) {
+      return;
+    }
+
+    const lineNumber = currentTraceStep?.line_number;
+    if (!lineNumber) {
+      decorationIdsRef.current = editor.deltaDecorations(decorationIdsRef.current, []);
+      return;
+    }
+
+    decorationIdsRef.current = editor.deltaDecorations(decorationIdsRef.current, [
+      {
+        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
+        options: {
+          isWholeLine: true,
+          className: "codevista-active-line",
+          glyphMarginClassName: "codevista-active-line-glyph",
+        },
+      },
+    ]);
+
+    editor.revealLineInCenter(lineNumber);
+  }, [currentTraceStep]);
+
+  useEffect(() => {
+    if (!requestedSessionId || !accessToken) {
+      return;
+    }
+
+    let active = true;
+
+    const toBufferedExecution = (
+      detail: SessionDetail
+    ): BufferedExecution[] =>
+      detail.executions.map((execution) => ({
+        code: execution.code,
+        language: execution.language,
+        output: execution.output.stdout || "",
+        error: execution.output.stderr || "",
+        runtime: execution.output.runtime_ms || 0,
+        memory: execution.output.memory_kb || 0,
+        ai: {
+          pseudocode: execution.analysis?.pseudocode || [],
+          explanation: execution.analysis?.explanation || "",
+          complexity: {
+            time: {
+              best: execution.analysis?.time_complexity.best || "",
+              average: execution.analysis?.time_complexity.average || "",
+              worst: execution.analysis?.time_complexity.worst || "",
+            },
+            space: execution.analysis?.space_complexity || "",
+          },
+          trace: execution.analysis?.execution_trace || [],
+          algorithmSteps: execution.analysis?.algorithm_steps || [],
+        },
+      }));
+
+    void (async () => {
+      setRestoringSession(true);
+      setExecutionError(null);
+      setAnalysisError(null);
+
+      try {
+        const detail = await fetchSessionDetail(requestedSessionId, accessToken);
+
+        if (!active) {
+          return;
+        }
+
+        const latestExecution =
+          detail.executions[detail.executions.length - 1] ?? null;
+
+        if (latestExecution) {
+          setCode(latestExecution.code);
+          setLanguage(latestExecution.language);
+          setResult({
+            stdout: latestExecution.output.stdout,
+            stderr: latestExecution.output.stderr,
+            runtime_ms: latestExecution.output.runtime_ms,
+            memory_kb: latestExecution.output.memory_kb,
+          });
+          setAnalysis(
+            latestExecution.analysis
+              ? {
+                  pseudocode: latestExecution.analysis.pseudocode,
+                  algorithm_steps: latestExecution.analysis.algorithm_steps,
+                  time_complexity: {
+                    best: latestExecution.analysis.time_complexity.best || "",
+                    average: latestExecution.analysis.time_complexity.average || "",
+                    worst: latestExecution.analysis.time_complexity.worst || "",
+                  },
+                  space_complexity: latestExecution.analysis.space_complexity,
+                  source: "cache",
+                }
+              : null
+          );
+          const restoredTrace = normalizeTrace(
+            latestExecution.analysis?.execution_trace ?? []
+          );
+          setTraceSteps(restoredTrace);
+          setTraceIndex(0);
+          setIsTracePlaying(false);
+        } else {
+          setResult(null);
+          setAnalysis(null);
+          setTraceSteps([]);
+          setTraceIndex(0);
+          setIsTracePlaying(false);
+        }
+
+        setActiveTab("analysis");
+        setRestoredSessionTitle(detail.title || null);
+        hydrateSession({
+          sessionId: detail.id,
+          title: detail.title,
+          startedAt: detail.created_at,
+          executions: toBufferedExecution(detail),
+        });
+
+        const restoredThreadId = detail.chat?.thread_id || getStoredThreadId();
+        setStoredThreadId(restoredThreadId);
+        setChatThreadId(restoredThreadId);
+      } catch (error) {
+        if (!active) {
+          return;
+        }
+
+        setExecutionError(
+          error instanceof Error
+            ? error.message
+            : "Unable to restore the saved session."
+        );
+        const fallbackThreadId = getStoredThreadId();
+        setStoredThreadId(fallbackThreadId);
+        setChatThreadId(fallbackThreadId);
+      } finally {
+        if (active) {
+          setRestoringSession(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [accessToken, hydrateSession, requestedSessionId]);
 
   const runCode = async () => {
     try {
@@ -91,6 +332,9 @@ export default function EditorPage() {
       setAnalysisError(null);
       setActiveTab("output");
       setAnalysis(null);
+      setTraceSteps([]);
+      setTraceIndex(0);
+      setIsTracePlaying(false);
 
       const payload = JSON.stringify({ code, language });
       const headers = {
@@ -135,6 +379,10 @@ export default function EditorPage() {
       }
 
       setAnalysis(analysisData);
+      const nextTraceSteps = normalizeTrace(analysisData.execution_trace || []);
+      setTraceSteps(nextTraceSteps);
+      setTraceIndex(0);
+      setIsTracePlaying(false);
 
       if (accessToken) {
         appendExecution(
@@ -174,10 +422,10 @@ export default function EditorPage() {
     }
   };
 
-  if (authLoading) {
+  if (authLoading || restoringSession) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-[#020617] text-sm text-gray-400">
-        Loading workspace...
+        {restoringSession ? "Restoring saved session..." : "Loading workspace..."}
       </main>
     );
   }
@@ -251,8 +499,13 @@ export default function EditorPage() {
                   value={code}
                   theme="vs-dark"
                   onChange={(v) => setCode(v || "")}
+                  onMount={(editor, monaco) => {
+                    editorRef.current = editor;
+                    monacoRef.current = monaco;
+                  }}
                   options={{
                     fontSize: 14,
+                    glyphMargin: true,
                     minimap: { enabled: false },
                     smoothScrolling: true,
                   }}
@@ -269,6 +522,11 @@ export default function EditorPage() {
               {saveError && (
                 <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm">
                   {saveError}
+                </div>
+              )}
+              {requestedSessionId && activeRestoredSessionTitle && (
+                <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-sm">
+                  Restored session: {activeRestoredSessionTitle}
                 </div>
               )}
 
@@ -392,6 +650,138 @@ export default function EditorPage() {
                   )}
                 </AnimatePresence>
               </div>
+
+              <div className="rounded-xl border border-white/10 bg-[#111827] p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm text-gray-200">Execution Insights</h3>
+                    <p className="text-[11px] text-gray-500">
+                      {traceSteps.length > 0
+                        ? `Step ${traceIndex + 1} of ${traceSteps.length}`
+                        : "Trace data will appear here when available."}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      disabled={traceSteps.length === 0 || traceIndex === 0}
+                      onClick={() => {
+                        setIsTracePlaying(false);
+                        setTraceIndex((current) => Math.max(current - 1, 0));
+                      }}
+                      className="rounded-md border border-white/10 px-2 py-1 text-xs text-gray-300 disabled:opacity-40"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="button"
+                      disabled={traceSteps.length <= 1}
+                      onClick={() => {
+                        setIsTracePlaying((current) => !current);
+                      }}
+                      className="rounded-md border border-indigo-400/20 bg-indigo-500/10 px-2 py-1 text-xs text-indigo-200 disabled:opacity-40"
+                    >
+                      {isTracePlaying ? "Pause" : "Play"}
+                    </button>
+                    <button
+                      type="button"
+                      disabled={
+                        traceSteps.length === 0 || traceIndex >= traceSteps.length - 1
+                      }
+                      onClick={() => {
+                        setIsTracePlaying(false);
+                        setTraceIndex((current) =>
+                          Math.min(current + 1, traceSteps.length - 1)
+                        );
+                      }}
+                      className="rounded-md border border-white/10 px-2 py-1 text-xs text-gray-300 disabled:opacity-40"
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3">
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                        Active Line
+                      </p>
+                      <p className="mt-2 font-mono text-sm text-indigo-300">
+                        {currentTraceStep?.line_number ?? "--"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                        Event
+                      </p>
+                      <p className="mt-2 font-mono text-sm text-cyan-300">
+                        {currentTraceStep?.event_type ?? "--"}
+                      </p>
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                        Return Flow
+                      </p>
+                      <p className="mt-2 font-mono text-sm text-emerald-300 break-all">
+                        {currentTraceStep?.return_value == null
+                          ? "--"
+                          : JSON.stringify(currentTraceStep.return_value)}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                        Call Stack
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {currentTraceStep?.call_stack?.length ? (
+                          currentTraceStep.call_stack.map((frame, index) => (
+                            <div
+                              key={`${frame}-${index}`}
+                              className="rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-amber-200"
+                            >
+                              {frame}
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-xs text-gray-500">
+                            No call stack data yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
+                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
+                        Variable State
+                      </p>
+                      <div className="mt-2 space-y-2">
+                        {traceVariables.length > 0 ? (
+                          traceVariables.map(([name, value]) => (
+                            <div
+                              key={name}
+                              className="flex items-start justify-between gap-3 rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs"
+                            >
+                              <span className="text-sky-200">{name}</span>
+                              <span className="text-gray-300 break-all text-right">
+                                {JSON.stringify(value)}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-xs text-gray-500">
+                            No variable snapshot data yet.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -406,6 +796,35 @@ export default function EditorPage() {
           context={chatContext}
         />
       ) : null}
+
+      <style jsx global>{`
+        .codevista-active-line {
+          background: rgba(99, 102, 241, 0.18);
+          border-top: 1px solid rgba(99, 102, 241, 0.45);
+          border-bottom: 1px solid rgba(99, 102, 241, 0.3);
+        }
+
+        .codevista-active-line-glyph {
+          background: linear-gradient(180deg, #818cf8, #6366f1);
+          width: 6px !important;
+          margin-left: 6px;
+          border-radius: 999px;
+        }
+      `}</style>
     </div>
+  );
+}
+
+export default function EditorPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="min-h-screen flex items-center justify-center bg-[#020617] text-sm text-gray-400">
+          Loading workspace...
+        </main>
+      }
+    >
+      <EditorWorkspace />
+    </Suspense>
   );
 }

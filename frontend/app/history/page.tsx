@@ -11,6 +11,9 @@ type HistorySession = {
   id: string;
   title: string | null;
   created_at: string;
+  updated_at: string;
+  language: string | null;
+  execution_count: number;
 };
 
 export default function HistoryPage() {
@@ -86,9 +89,10 @@ export default function HistoryPage() {
                 Your saved coding sessions
               </h1>
               <p className="mt-3 max-w-2xl text-base leading-8 text-gray-500">
-                This page is the first step toward a fuller history workflow.
-                Saved sessions are listed here so phase 2 can extend into session
-                restore, comparison, and deeper history management.
+                Reopen previous work with its saved code, analysis, execution
+                output, and attached conversation context. This is the recovery
+                layer that keeps CodeVista useful across multiple learning
+                sessions.
               </p>
             </div>
 
@@ -137,11 +141,22 @@ export default function HistoryPage() {
                           <Clock3 size={14} />
                           {new Date(item.created_at).toLocaleString()}
                         </div>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">
+                            {item.language || "Unknown language"}
+                          </span>
+                          <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">
+                            {item.execution_count} run{item.execution_count === 1 ? "" : "s"}
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-gray-500">
-                        Session saved
-                      </div>
+                      <Link
+                        href={`/editor?sessionId=${item.id}`}
+                        className="inline-flex items-center justify-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-[#4f46e5] transition hover:bg-[#e0e7ff]"
+                      >
+                        Reopen Session
+                      </Link>
                     </div>
                   </div>
                 ))}
