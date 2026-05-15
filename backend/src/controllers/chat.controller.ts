@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { generateChatReply } from "../services/ai.service";
 import { getChatMessages, insertMessagesBatch } from "../services/chat.service";
+import { AppError } from "../middleware/error.middleware";
+import { logger } from "../utils/logger";
 
 export const chat = async (req: Request, res: Response) => {
   try {
@@ -17,31 +19,52 @@ export const chat = async (req: Request, res: Response) => {
 
 export const saveBatch = async (req: Request, res: Response) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "UNAUTHORIZED" });
+    }
+
     const { threadId, sessionId, title, messages } = req.body ?? {};
-    await insertMessagesBatch(threadId ?? sessionId, messages, {
+    await insertMessagesBatch(req.user.id, threadId ?? sessionId, messages, {
       sessionId,
       title,
-      userId: req.user?.id ?? null,
     });
     return res.status(200).json({ success: true });
   } catch (error) {
+    const status = error instanceof AppError ? error.status : 500;
+    const code =
+      error instanceof AppError ? error.code : "CHAT_BATCH_SAVE_FAILED";
     const message =
       error instanceof Error ? error.message : "Unable to save chat messages.";
-    console.error("[BATCH SAVE FAILED]", message);
-    return res.status(200).json({ success: false });
+
+    logger.warn("chat.batch_save_failed", {
+      status,
+      code,
+      message,
+    });
+
+    return res.status(status).json({
+      error: code,
+      message,
+    });
   }
 };
 
 export const getThreadMessages = async (req: Request, res: Response) => {
   try {
+    if (!req.user?.id) {
+      return res.status(401).json({ error: "UNAUTHORIZED" });
+    }
+
     const threadId = Array.isArray(req.params.threadId)
       ? req.params.threadId[0]
       : req.params.threadId;
-    const messages = await getChatMessages(threadId);
+    const messages = await getChatMessages(req.user.id, threadId);
     return res.status(200).json({ messages });
   } catch (error) {
+    const status = error instanceof AppError ? error.status : 400;
+    const code = error instanceof AppError ? error.code : "CHAT_FETCH_FAILED";
     const message =
       error instanceof Error ? error.message : "Unable to load chat messages.";
-    return res.status(400).json({ error: message });
+    return res.status(status).json({ error: code, message });
   }
 };
