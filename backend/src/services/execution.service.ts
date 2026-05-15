@@ -1,6 +1,7 @@
 import { executeJudge0 } from "../integrations/judge0";
 import { executePiston } from "../integrations/piston";
 import { cacheService } from "./cache.service";
+import { logger } from "../utils/logger";
 
 export const executeCode = async (code: string, language: string) => {
   const cacheKey = cacheService.getExecutionCacheKey(code, language);
@@ -8,14 +9,20 @@ export const executeCode = async (code: string, language: string) => {
   //Check cache
   const cached = cacheService.get(cacheKey);
   if (cached) {
-    console.log(`[CACHE HIT] ${cacheKey}`);
+    logger.info("execution.cache.hit", {
+      cache_key: cacheKey,
+      language,
+    });
     return {
       ...cached,
       source: "cache",
     };
   }
 
-  console.log(`[EXECUTION] ${language} (cache miss)`);
+  logger.info("execution.cache.miss", {
+    cache_key: cacheKey,
+    language,
+  });
 
   let result: any = null;
   let lastError: Error | null = null;
@@ -30,18 +37,30 @@ export const executeCode = async (code: string, language: string) => {
         source: "judge0",
       };
 
-      console.log(`[JUDGE0] ✅ Success`);
+      logger.info("execution.provider.success", {
+        provider: "judge0",
+        language,
+      });
       break;
     } catch (err) {
       lastError = err as Error;
-      console.warn(`[JUDGE0 RETRY ${i + 1}] ⚠️ Failed: ${lastError.message}`);
+      logger.warn("execution.provider.retry", {
+        provider: "judge0",
+        attempt: i + 1,
+        language,
+        message: lastError.message,
+      });
       await new Promise((r) => setTimeout(r, 500));
     }
   }
 
   //If all attempts fail → graceful error response
   if (!result) {
-    console.warn(`[JUDGE0 FAILED] ${lastError?.message}`);
+    logger.warn("execution.provider.failed", {
+      provider: "judge0",
+      language,
+      message: lastError?.message,
+    });
 
     try {
       const pistonResult = await executePiston(code, language);
@@ -51,14 +70,20 @@ export const executeCode = async (code: string, language: string) => {
         source: "piston",
       };
 
-      console.log(`[PISTON] ✅ Success`);
+      logger.info("execution.provider.success", {
+        provider: "piston",
+        language,
+      });
     } catch (pistonError) {
       const typedError =
         pistonError instanceof Error
           ? pistonError
           : new Error("Piston execution failed");
 
-      console.error(`[EXECUTION FAILED] ${typedError.message}`);
+      logger.error("execution.providers.exhausted", {
+        language,
+        message: typedError.message,
+      });
 
       return {
         stdout: "",
@@ -77,7 +102,10 @@ export const executeCode = async (code: string, language: string) => {
 
   // ✅ Cache only successful results
   cacheService.set(cacheKey, result, 60);
-  console.log(`[CACHE SET] ${cacheKey}`);
+  logger.info("execution.cache.set", {
+    cache_key: cacheKey,
+    language,
+  });
 
   return result;
 };

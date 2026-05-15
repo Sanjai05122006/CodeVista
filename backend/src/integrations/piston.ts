@@ -1,5 +1,6 @@
 import axios from "axios";
 import { env } from "../config/env";
+import { logger } from "../utils/logger";
 
 const PISTON_BASE_URL = env.PISTON_BASE_URL;
 
@@ -32,10 +33,9 @@ export const executePiston = async (code: string, language: string) => {
     return response.data;
 
   } catch (error: any) {
-    console.error("❌ PISTON ERROR:", {
+    logger.error("piston.execution_failed", {
       message: error.message,
       status: error.response?.status,
-      data: error.response?.data,
     });
 
     throw error;

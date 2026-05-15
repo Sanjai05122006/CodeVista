@@ -1,5 +1,6 @@
 import axios from "axios";
 import { env } from "../config/env";
+import { logger } from "../utils/logger";
 
 const BASE_URL = env.JUDGE0_BASE_URL;
 
@@ -35,10 +36,9 @@ export const executeJudge0 = async (code: string, language: string) => {
     return response.data;
 
   } catch (error: any) {
-    console.error("JUDGE0 ERROR:", {
+    logger.error("judge0.execution_failed", {
       message: error.message,
       status: error.response?.status,
-      data: error.response?.data,
     });
 
     throw new Error("Judge0 execution failed");
@@ -55,7 +55,9 @@ export const getLanguages = async () => {
     return response.data;
 
   } catch (error: any) {
-    console.error("JUDGE0 LANGUAGES ERROR:", error.message);
+    logger.error("judge0.languages_failed", {
+      message: error.message,
+    });
     throw new Error("Failed to fetch languages");
   }
 };

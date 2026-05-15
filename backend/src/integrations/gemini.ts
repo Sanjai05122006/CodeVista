@@ -35,20 +35,7 @@ export const generateGeminiAnalysis = async (
       }
     );
 
-        const rawText =
-          response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-        // 🔍 RAW RESPONSE DEBUG (DEV ONLY)
-    if (process.env.NODE_ENV !== "production") {
-      console.log("\n================= GEMINI RAW RESPONSE =================");
-      console.log(rawText);
-      console.log("=======================================================\n");
-    }
-
-    // 📊 STRUCTURED PREVIEW LOG (SAFE FOR PROD)
-    logger.info("gemini.raw_response", {
-      preview: rawText?.slice(0, 300), // first 300 chars
-      length: rawText?.length,
-    });
+    const rawText = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
 
     if (!rawText || typeof rawText !== "string") {
       throw new AIServiceError(
@@ -61,6 +48,7 @@ export const generateGeminiAnalysis = async (
       provider: "gemini",
       model: GEMINI_MODEL,
       latency_ms: Date.now() - startedAt,
+      output_chars: rawText.length,
     });
 
     return rawText;

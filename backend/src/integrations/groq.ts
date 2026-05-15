@@ -38,15 +38,7 @@ export const generateGroqAnalysis = async (
         timeout: 30000,
       }
     );
-    logger.info("groq.full_response", {
-  data: response.data,
-});
     const rawText = response.data?.choices?.[0]?.message?.content;
-
-    logger.info("groq.raw_response", {
-      preview: rawText?.slice(0, 300),
-      length: rawText?.length,
-    });
 
     if (!rawText || typeof rawText !== "string") {
       throw new AIServiceError(
@@ -59,6 +51,7 @@ export const generateGroqAnalysis = async (
       provider: "groq",
       model: GROQ_MODEL,
       latency_ms: Date.now() - startedAt,
+      output_chars: rawText.length,
     });
 
     return rawText;
@@ -69,34 +62,24 @@ export const generateGroqAnalysis = async (
 
     const isTimeout = error.code === "ECONNABORTED";
     const status = error.response?.status;
-    const errorData = error.response?.data;
     const message =
-      errorData?.error?.message || error.message || "Groq request failed";
+      error.response?.data?.error?.message ||
+      error.message ||
+      "Groq request failed";
 
     logger.error("groq.response.failed", {
-  provider: "groq",
-  model: GROQ_MODEL,
-  latency_ms: Date.now() - startedAt,
-  error_code: error.code,
-  status,
-  message,
-  response_data: errorData,
-
-  // 🔥 ADD THESE
-  full_error: {
-    code: error.code,
-    message: error.message,
-    stack: error.stack,
-  },
-});
+      provider: "groq",
+      model: GROQ_MODEL,
+      latency_ms: Date.now() - startedAt,
+      error_code: error.code,
+      status,
+      message,
+    });
 
     throw new AIServiceError(
       isTimeout ? "AI_TIMEOUT_ERROR" : "AI_NETWORK_ERROR",
       status ? `status ${status}: ${message}` : message,
-      status || 502,
-
-      
+      status || 502
     );
   }
 };
-
