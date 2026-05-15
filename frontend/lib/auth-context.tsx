@@ -10,6 +10,7 @@ import {
 } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
+import { clearStoredChatState } from "@/hooks/useLocalChat";
 
 type AuthContextValue = {
   session: Session | null;
@@ -26,7 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const refreshSession = async () => {
+  const refreshSession = useCallback(async () => {
     const {
       data: { session: nextSession },
     } = await supabase.auth.getSession();
@@ -35,8 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLoading(false);
 
     return nextSession;
-  };
-
+  }, []);
+ 
   useEffect(() => {
     let mounted = true;
 
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
+    clearStoredChatState();
     setSession(null);
   }, []);
 

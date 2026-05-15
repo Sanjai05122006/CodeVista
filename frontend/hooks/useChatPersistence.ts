@@ -42,6 +42,11 @@ export const useChatPersistence = ({
       return flushInFlight.current;
     }
 
+    if (!accessToken) {
+      buffer.current = [];
+      return true;
+    }
+
     if (!threadId || !buffer.current.length) {
       return true;
     }
@@ -66,9 +71,14 @@ export const useChatPersistence = ({
       .then(async (response) => {
         await response.json().catch(() => null);
 
+        if (!response.ok) {
+          buffer.current = [...batch, ...buffer.current];
+          return false;
+        }
+
         return true;
       })
-      .catch((error) => {
+      .catch(() => {
         buffer.current = [...batch, ...buffer.current];
         return false;
       })
@@ -89,17 +99,21 @@ export const useChatPersistence = ({
 
   const add = useCallback(
     (msg: PersistedChatMessage) => {
+      if (!accessToken) {
+        return;
+      }
+
       buffer.current.push(msg);
       schedule();
     },
-    [schedule]
+    [accessToken, schedule]
   );
 
   useEffect(() => {
     const handlePageHide = () => {
       clearScheduledFlush();
 
-      if (!threadId || !buffer.current.length) {
+      if (!accessToken || !threadId || !buffer.current.length) {
         return;
       }
 

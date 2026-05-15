@@ -5,10 +5,7 @@ import { MessageSquare } from "lucide-react";
 import { buildApiUrl } from "@/lib/api";
 import { useLocalChat } from "@/hooks/useLocalChat";
 import { useTypingEffect } from "@/hooks/useTypingEffect";
-import {
-  PersistedChatMessage,
-  useChatPersistence,
-} from "@/hooks/useChatPersistence";
+import { useChatPersistence } from "@/hooks/useChatPersistence";
 
 type Message = {
   id: string;
@@ -59,13 +56,16 @@ export default function CopilotWidget({
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [loadingAI, setLoadingAI] = useState(false);
-  const [status, setStatus] = useState<"saved" | "syncing" | "error">("saved");
   const [stream, setStream] = useState("");
   const [error, setError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const messagesRef = useRef<Message[]>([]);
   const timerRef = useRef<number | null>(null);
-  const { messages, setMessages, loaded } = useLocalChat(threadId, initialMessages);
+  const { messages, setMessages, loaded } = useLocalChat(
+    threadId,
+    initialMessages,
+    accessToken
+  );
   const { add, flush } = useChatPersistence({
     threadId,
     title,
@@ -76,14 +76,6 @@ export default function CopilotWidget({
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
-
-  useEffect(() => {
-    if (loadingAI) {
-      setStatus("syncing");
-    } else {
-      setStatus("saved");
-    }
-  }, [loadingAI]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -99,6 +91,7 @@ export default function CopilotWidget({
   }, [flush]);
 
   const typed = useTypingEffect(stream);
+  const status = error ? "error" : loadingAI ? "syncing" : "saved";
 
   const sendMessage = async () => {
     const trimmed = input.trim();
@@ -125,7 +118,6 @@ export default function CopilotWidget({
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoadingAI(true);
-    setStatus("syncing");
     setError(null);
     add({
       role: userMessage.role,
@@ -187,11 +179,9 @@ export default function CopilotWidget({
         });
         setStream("");
         setLoadingAI(false);
-        setStatus("saved");
       }, Math.min(Math.max(formattedReply.length * 10, 600), 2200));
-    } catch (requestError) {
+    } catch {
       setLoadingAI(false);
-      setStatus("error");
       setStream("");
       setError("Unable to get a reply right now. Please try again.");
     }
