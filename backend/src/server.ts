@@ -1,7 +1,10 @@
 import app from "./app";
 import { env } from "./config/env";
+import { logger } from "./utils/logger";
 
 app.listen(env.PORT, () => {
-  console.log(`🚀 Server running on port ${env.PORT}`);
-  console.log(`🌐 CORS origin: ${env.FRONTEND_URL}`);
+  logger.info("server.started", {
+    port: env.PORT,
+    cors_origin: env.FRONTEND_URL,
+  });
 });
