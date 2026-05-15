@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Mail, Lock, Code2 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -191,7 +192,7 @@ export default function LoginPage() {
           flex items-center justify-center gap-2 text-gray-700 
           hover:bg-gray-50 transition disabled:opacity-70"
           >
-            <img src="/google.svg" alt="" className="w-5 h-5" />
+            <Image src="/google.svg" alt="" width={20} height={20} />
             Continue with Google
           </button>
 
