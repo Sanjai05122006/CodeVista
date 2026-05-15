@@ -71,3 +71,6 @@ dist/
 # =========================
 *.log
 .hintrc
+
+#SQL-Files
+backend/sql/
