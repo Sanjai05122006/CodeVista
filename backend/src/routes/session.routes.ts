@@ -5,11 +5,12 @@ import {
   getSessionHistoryHandler,
   saveSessionHandler,
 } from "../controllers/session.controller";
+import { validateSessionSaveRequest } from "../middleware/rateLimit.middleware";
 
 const router = Router();
 
 router.use(authMiddleware);
-router.post("/save", saveSessionHandler);
+router.post("/save", validateSessionSaveRequest, saveSessionHandler);
 router.get("/history", getSessionHistoryHandler);
 router.get("/:id", getSessionDetailHandler);
 

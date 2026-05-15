@@ -1,39 +1,6 @@
-/* import { NextFunction, Request, Response } from "express";
-import { supabaseAdmin } from "../config/db";
-
-export const optionalAuthMiddleware = async (
-  req: Request,
-  _res: Response,
-  next: NextFunction
-) => {
-  const authorizationHeader = req.header("Authorization");
-
-  if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
-    return next();
-  }
-
-  const token = authorizationHeader.slice("Bearer ".length).trim();
-
-  if (!token) {
-    return next();
-  }
-
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
-
-  if (!error && data.user) {
-    req.user = {
-      id: data.user.id,
-      email: data.user.email,
-      role: data.user.role,
-    };
-  }
-
-  return next();
-};
- */
-
 import { NextFunction, Request, Response } from "express";
 import { supabaseAdmin } from "../config/db";
+import { logger } from "../utils/logger";
 
 export const optionalAuthMiddleware = async (
   req: Request,
@@ -53,7 +20,10 @@ export const optionalAuthMiddleware = async (
     const { data, error } = await supabaseAdmin.auth.getUser(token);
 
     if (error) {
-      console.warn("[AUTH FAILED]", error.message);
+      logger.warn("auth.optional_failed", {
+        path: req.path,
+        method: req.method,
+      });
       return next();
     }
 
@@ -67,7 +37,11 @@ export const optionalAuthMiddleware = async (
 
     return next();
   } catch (err: any) {
-    console.error("[AUTH ERROR]", err.message);
+    logger.warn("auth.optional_error", {
+      path: req.path,
+      method: req.method,
+      message: err instanceof Error ? err.message : "Unknown auth error",
+    });
     return next(); // never block request
   }
 };

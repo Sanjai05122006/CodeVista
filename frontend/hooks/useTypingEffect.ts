@@ -7,13 +7,20 @@ export const useTypingEffect = (text: string) => {
 
   useEffect(() => {
     if (!text) {
-      setOut("");
-      return;
+      const resetTimer = window.setTimeout(() => {
+        setOut("");
+      }, 0);
+
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
     }
 
-    let index = 0;
-    setOut("");
+    const startTimer = window.setTimeout(() => {
+      setOut("");
+    }, 0);
 
+    let index = 0;
     const timer = window.setInterval(() => {
       index += 1;
       setOut(text.slice(0, index));
@@ -24,6 +31,7 @@ export const useTypingEffect = (text: string) => {
     }, 15);
 
     return () => {
+      window.clearTimeout(startTimer);
       window.clearInterval(timer);
     };
   }, [text]);

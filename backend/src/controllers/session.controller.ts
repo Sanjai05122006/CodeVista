@@ -4,6 +4,7 @@ import {
   getSessionHistory,
   saveSession,
 } from "../services/session.service";
+import { AppError } from "../middleware/error.middleware";
 
 export const saveSessionHandler = async (req: Request, res: Response) => {
   try {
@@ -17,8 +18,9 @@ export const saveSessionHandler = async (req: Request, res: Response) => {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to save session.";
-    const status = message === "SESSION_NOT_FOUND" ? 404 : 400;
-    return res.status(status).json({ error: message });
+    const status = error instanceof AppError ? error.status : 400;
+    const code = error instanceof AppError ? error.code : "SESSION_SAVE_FAILED";
+    return res.status(status).json({ error: code, message });
   }
 };
 
@@ -40,7 +42,10 @@ export const getSessionHistoryHandler = async (req: Request, res: Response) => {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to load history.";
-    return res.status(400).json({ error: message });
+    const status = error instanceof AppError ? error.status : 400;
+    const code =
+      error instanceof AppError ? error.code : "SESSION_HISTORY_FAILED";
+    return res.status(status).json({ error: code, message });
   }
 };
 
@@ -60,7 +65,9 @@ export const getSessionDetailHandler = async (req: Request, res: Response) => {
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Unable to load session.";
-    const status = message === "SESSION_NOT_FOUND" ? 404 : 400;
-    return res.status(status).json({ error: message });
+    const status = error instanceof AppError ? error.status : 400;
+    const code =
+      error instanceof AppError ? error.code : "SESSION_DETAIL_FAILED";
+    return res.status(status).json({ error: code, message });
   }
 };

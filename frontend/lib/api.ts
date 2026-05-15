@@ -56,12 +56,6 @@ async function authorizedJsonFetch<T>(
 
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
-      console.log("[api] request", {
-        url: requestUrl,
-        method: init.method ?? "GET",
-        attempt: attempt + 1,
-      });
-
       const response = await fetch(requestUrl, {
         ...init,
         headers: {
@@ -69,12 +63,6 @@ async function authorizedJsonFetch<T>(
           Authorization: `Bearer ${accessToken}`,
           ...(init.headers ?? {}),
         },
-      });
-
-      console.log("[api] response", {
-        url: requestUrl,
-        status: response.status,
-        ok: response.ok,
       });
 
       const data = (await response.json().catch(() => null)) as
@@ -99,13 +87,6 @@ async function authorizedJsonFetch<T>(
         : error instanceof Error
         ? error.message
         : "Request failed";
-
-      console.error("[api] fetch error", {
-        url: requestUrl,
-        attempt: attempt + 1,
-        message,
-        originalError: error,
-      });
 
       lastError = new Error(message);
 

@@ -28,7 +28,6 @@ export default function HistoryPage() {
 
   useEffect(() => {
     if (!accessToken) {
-      setFetching(false);
       return;
     }
 

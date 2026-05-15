@@ -1,5 +1,6 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import { env } from "./config/env";
 import { errorHandler } from "./middleware/error.middleware";
 
@@ -9,10 +10,18 @@ import languageRoutes from "./routes/language.routes";
 import sessionRoutes from "./routes/session.routes";
 import historyRoutes from "./routes/history.routes";
 import chatRoutes from "./routes/chat.routes";
+import { MAX_JSON_BODY_SIZE } from "./middleware/rateLimit.middleware";
 
 const app = express();
 const apiRouter = express.Router();
 
+app.set("trust proxy", 1);
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
 app.use(
   cors({
     origin: env.FRONTEND_URL,
@@ -29,7 +38,7 @@ app.use((req, res, next) => {
 
   next();
 });
-app.use(express.json());
+app.use(express.json({ limit: MAX_JSON_BODY_SIZE }));
 
 app.get("/", (req, res) => {
   res.json({

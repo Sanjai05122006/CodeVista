@@ -9,6 +9,7 @@ import AnalysisPanel from "../../components/analysis-panel";
 import ChatContainer from "@/components/chat/ChatContainer";
 import { useAuth } from "@/lib/auth-context";
 import { useSessionBuffer } from "@/hooks/useSessionBuffer";
+import { getStoredThreadId } from "@/hooks/useLocalChat";
 
 type AnalysisData = {
   pseudocode: string[];
@@ -55,23 +56,6 @@ export default function EditorPage() {
   const { appendExecution, flush, saveError, sessionId } =
     useSessionBuffer(accessToken);
 
-  useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
-    }
-
-    const existingThreadId = window.localStorage.getItem(
-      "codevista.editor.chatThreadId"
-    );
-    const nextThreadId = existingThreadId || crypto.randomUUID();
-
-    if (!existingThreadId) {
-      window.localStorage.setItem("codevista.editor.chatThreadId", nextThreadId);
-    }
-
-    setChatThreadId(nextThreadId);
-  }, []);
-
   const derivedTitle = useMemo(() => {
     const firstLine = code.split("\n").find((line) => line.trim().length > 0);
     return firstLine ? firstLine.trim().slice(0, 80) : "Untitled session";
@@ -89,7 +73,12 @@ export default function EditorPage() {
   );
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setChatThreadId(getStoredThreadId());
+    }, 0);
+
     return () => {
+      window.clearTimeout(timer);
       void flush();
     };
   }, [flush]);

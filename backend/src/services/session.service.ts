@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../config/db";
+import { AppError } from "../middleware/error.middleware";
 
 /* =========================
    TYPES
@@ -39,7 +40,7 @@ type SaveSessionInput = {
 
 const validateExecutions = (payload: SaveSessionInput) => {
   if (!payload.executions || payload.executions.length === 0) {
-    throw new Error("NO_EXECUTIONS_PROVIDED");
+    throw new AppError("INVALID_REQUEST_BODY", 400, "NO_EXECUTIONS_PROVIDED");
   }
 
   return payload.executions;
@@ -54,25 +55,48 @@ export const saveSession = async (
   payload: SaveSessionInput
 ) => {
   const executions = validateExecutions(payload);
+  let sessionId: string = crypto.randomUUID();
 
-  //IMPORTANT: user must already exist via DB trigger
-  const sessionId = payload.sessionId ?? crypto.randomUUID();
+  if (payload.sessionId) {
+    const { data: existingSession, error: existingSessionError } =
+      await supabaseAdmin
+        .from("sessions")
+        .select("id, user_id")
+        .eq("id", payload.sessionId)
+        .single();
 
-  // UPSERT SESSION
-  const { error: sessionError } = await supabaseAdmin
-    .from("sessions")
-    .upsert(
-      {
-        id: sessionId,
-        user_id: userId,
-        title: payload.title ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "id" }
-    );
+    if (existingSessionError || !existingSession) {
+      throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
+    }
+
+    if (existingSession.user_id !== userId) {
+      throw new AppError("FORBIDDEN", 403, "SESSION_ACCESS_DENIED");
+    }
+
+    sessionId = payload.sessionId;
+  }
+
+  const sessionPayload = {
+    id: sessionId,
+    user_id: userId,
+    title: payload.title ?? null,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { error: sessionError } = payload.sessionId
+    ? await supabaseAdmin
+        .from("sessions")
+        .update(sessionPayload)
+        .eq("id", sessionId)
+        .eq("user_id", userId)
+    : await supabaseAdmin.from("sessions").insert(sessionPayload);
 
   if (sessionError) {
-    throw new Error(`SESSION_UPSERT_FAILED: ${sessionError.message}`);
+    throw new AppError(
+      "SESSION_UPSERT_FAILED",
+      500,
+      `SESSION_UPSERT_FAILED: ${sessionError.message}`
+    );
   }
 
   // CLEAR OLD DATA (idempotent behavior)
@@ -95,7 +119,11 @@ export const saveSession = async (
       .select();
 
   if (executionError || !executionData) {
-    throw new Error(`EXECUTION_INSERT_FAILED: ${executionError?.message}`);
+    throw new AppError(
+      "EXECUTION_INSERT_FAILED",
+      500,
+      `EXECUTION_INSERT_FAILED: ${executionError?.message}`
+    );
   }
 
   // INSERT AI OUTPUTS + RESULTS
@@ -167,7 +195,7 @@ export const getSessionDetail = async (
     .single();
 
   if (sessionError || !session) {
-    throw new Error("SESSION_NOT_FOUND");
+    throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
   }
 
   const { data: executions } = await supabaseAdmin
@@ -200,7 +228,7 @@ export const saveChatMessages = async (
     .single();
 
   if (!session) {
-    throw new Error("SESSION_NOT_FOUND");
+    throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
   }
 
   const rows = payload.messages.map((m) => ({
@@ -215,7 +243,11 @@ export const saveChatMessages = async (
     .select();
 
   if (error) {
-    throw new Error(`CHAT_SAVE_FAILED: ${error.message}`);
+    throw new AppError(
+      "CHAT_SAVE_FAILED",
+      500,
+      `CHAT_SAVE_FAILED: ${error.message}`
+    );
   }
 
   return data ?? [];
@@ -233,7 +265,7 @@ export const getChatMessages = async (
     .single();
 
   if (!session) {
-    throw new Error("SESSION_NOT_FOUND");
+    throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
   }
 
   const { data, error } = await supabaseAdmin
@@ -243,7 +275,11 @@ export const getChatMessages = async (
     .order("created_at", { ascending: true });
 
   if (error) {
-    throw new Error(`CHAT_FETCH_FAILED: ${error.message}`);
+    throw new AppError(
+      "CHAT_FETCH_FAILED",
+      500,
+      `CHAT_FETCH_FAILED: ${error.message}`
+    );
   }
 
   return data ?? [];

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import {
   Mail,
@@ -12,6 +13,25 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth-context";
+
+const passwordRequirements = [
+  {
+    label: "At least 8 characters",
+    test: (value: string) => value.length >= 8,
+  },
+  {
+    label: "One uppercase letter",
+    test: (value: string) => /[A-Z]/.test(value),
+  },
+  {
+    label: "One number",
+    test: (value: string) => /\d/.test(value),
+  },
+  {
+    label: "One special character",
+    test: (value: string) => /[^A-Za-z0-9]/.test(value),
+  },
+];
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -39,6 +59,13 @@ export default function RegisterPage() {
 
     if (password !== confirmPassword) {
       window.alert("Passwords do not match.");
+      return;
+    }
+
+    if (!passwordRequirements.every((requirement) => requirement.test(password))) {
+      window.alert(
+        "Password must be at least 8 characters and include an uppercase letter, a number, and a special character."
+      );
       return;
     }
 
@@ -203,10 +230,18 @@ export default function RegisterPage() {
 
             {/* RULES */}
             <div className="grid grid-cols-2 gap-y-3 mt-6 text-sm text-gray-500">
-              <span className="text-[#6366f1]">✔ At least 8 characters</span>
-              <span className="text-[#6366f1]">✔ One uppercase letter</span>
-              <span className="text-[#6366f1]">✔ One number</span>
-              <span className="text-[#6366f1]">✔ One special character</span>
+              {passwordRequirements.map((requirement) => {
+                const matched = requirement.test(password);
+
+                return (
+                  <span
+                    key={requirement.label}
+                    className={matched ? "text-[#6366f1]" : "text-gray-400"}
+                  >
+                    {matched ? "✔" : "•"} {requirement.label}
+                  </span>
+                );
+              })}
             </div>
 
             {/* CHECK */}
@@ -257,7 +292,7 @@ export default function RegisterPage() {
             disabled={submitting}
             className="w-full border border-gray-200 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-700 hover:bg-gray-50 transition disabled:opacity-70"
           >
-            <img src="/google.svg" alt="" className="w-5 h-5" />
+            <Image src="/google.svg" alt="" width={20} height={20} />
             Continue with Google
           </button>
 

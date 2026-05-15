@@ -1,15 +1,26 @@
 type LogLevel = "info" | "warn" | "error";
 
+const sanitizeMeta = (meta?: Record<string, unknown>) => {
+  if (!meta) {
+    return undefined;
+  }
+
+  return Object.fromEntries(
+    Object.entries(meta).filter(([, value]) => value !== undefined)
+  );
+};
+
 const writeLog = (
   level: LogLevel,
   message: string,
   meta?: Record<string, unknown>
 ) => {
+  const sanitizedMeta = sanitizeMeta(meta);
   const payload = {
     level,
     message,
     timestamp: new Date().toISOString(),
-    ...(meta ? { meta } : {}),
+    ...(sanitizedMeta ? { meta: sanitizedMeta } : {}),
   };
 
   const serialized = JSON.stringify(payload);
