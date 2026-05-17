@@ -341,23 +341,28 @@ function EditorWorkspace() {
         "Content-Type": "application/json",
       };
 
-      const [executionRes, analysisRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/execution`, {
-          method: "POST",
-          headers,
-          body: payload,
-        }),
-        fetch(`${API_BASE_URL}/analysis`, {
-          method: "POST",
-          headers,
-          body: payload,
-        }),
-      ]);
+      const executionRequest = fetch(`${API_BASE_URL}/execution`, {
+        method: "POST",
+        headers,
+        body: payload,
+      });
+      const analysisRequest = fetch(`${API_BASE_URL}/analysis`, {
+        method: "POST",
+        headers,
+        body: payload,
+      })
+        .then(async (response) => ({
+          response,
+          data: await response.json(),
+        }))
+        .catch((error) => ({
+          response: null as Response | null,
+          data: null as unknown,
+          error,
+        }));
 
-      const [executionData, analysisData] = await Promise.all([
-        executionRes.json(),
-        analysisRes.json(),
-      ]);
+      const executionRes = await executionRequest;
+      const executionData = await executionRes.json();
 
       if (!executionRes.ok || executionData.error) {
         setExecutionError(
@@ -369,8 +374,28 @@ function EditorWorkspace() {
       }
 
       setResult(executionData);
+      setLoading(false);
 
-      if (!analysisRes.ok || analysisData.error) {
+      const analysisResult = await analysisRequest;
+      const analysisRes = analysisResult.response;
+      const analysisData = analysisResult.data as
+        | {
+            error?: string;
+            message?: string;
+            pseudocode?: string[];
+            algorithm_steps?: string[];
+            time_complexity?: {
+              best: string;
+              average: string;
+              worst: string;
+            };
+            space_complexity?: string;
+            execution_trace?: unknown[];
+            explanation?: string;
+          }
+        | null;
+
+      if (!analysisRes || analysisResult.error || !analysisData || analysisData.error) {
         setAnalysisError(
           analysisData?.message ||
             "⚠️ Analysis is unavailable right now. Please try again."
