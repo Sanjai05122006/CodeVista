@@ -10,6 +10,7 @@ import languageRoutes from "./routes/language.routes";
 import sessionRoutes from "./routes/session.routes";
 import historyRoutes from "./routes/history.routes";
 import chatRoutes from "./routes/chat.routes";
+import workspaceRoutes from "./routes/workspace.routes";
 import { MAX_JSON_BODY_SIZE } from "./middleware/rateLimit.middleware";
 
 const app = express();
@@ -47,6 +48,7 @@ app.get("/", (req, res) => {
     endpoints: [
       "POST /api/execution",
       "POST /api/analysis",
+      "POST /api/workspace",
       "GET /api/languages",
       "POST /api/session/save",
       "GET /api/session/history",
@@ -58,6 +60,7 @@ app.get("/", (req, res) => {
 
 apiRouter.use("/execution", executionRoutes);
 apiRouter.use("/analysis", analysisRoutes);
+apiRouter.use("/workspace", workspaceRoutes);
 apiRouter.use("/languages", languageRoutes);
 apiRouter.use("/session", sessionRoutes);
 apiRouter.use("/history", historyRoutes);
