@@ -10,6 +10,7 @@ import {
 import { sha256 } from "../utils/hash";
 import { logger } from "../utils/logger";
 import { normalizeAnalysis, safeParse } from "../utils/analysis-normalizer";
+import { traceJavascriptExecution } from "./tracing/javascript-tracer.service";
 
 type CacheLike = Pick<typeof cacheService, "get" | "set">;
 type AnalysisProvider = (prompt: string) => Promise<string>;
@@ -352,6 +353,7 @@ const fallbackResponse: AnalysisResponse = {
     worst: "N/A",
   },
   space_complexity: "N/A",
+  execution_trace: [],
 };
 
 const parseAndNormalizeAnalysis = (rawText: string): AnalysisResponse => {
@@ -368,6 +370,30 @@ const parseAndNormalizeAnalysis = (rawText: string): AnalysisResponse => {
   logger.info("analysis.normalized");
 
   return normalized;
+};
+
+const ensureExecutionTrace = (
+  result: AnalysisResponse,
+  code: string,
+  language: string
+): AnalysisResponse => {
+  if (language !== "javascript") {
+    return {
+      ...result,
+      execution_trace: Array.isArray(result.execution_trace)
+        ? result.execution_trace
+        : [],
+    };
+  }
+
+  if (Array.isArray(result.execution_trace) && result.execution_trace.length > 0) {
+    return result;
+  }
+
+  return {
+    ...result,
+    execution_trace: traceJavascriptExecution(code),
+  };
 };
 
 const isFallbackResult = (result: AnalysisResponse) => {
@@ -462,6 +488,7 @@ export const analyzeCode = async (
 
   const localCached = getLocalCache(cacheKey);
   if (localCached) {
+    const cachedWithTrace = ensureExecutionTrace(localCached, code, language);
     logger.info("analysis.cache.hit", {
       cache_key: cacheKey,
       language,
@@ -469,14 +496,16 @@ export const analyzeCode = async (
       cache_layer: "memory",
     });
     return {
-      ...localCached,
+      ...cachedWithTrace,
       source: "cache",
     };
   }
 
   const cached = activeCache.get<AnalysisResponse>(cacheKey);
   if (cached) {
-    setLocalCache(cacheKey, cached, VALID_TTL_MINUTES);
+    const cachedWithTrace = ensureExecutionTrace(cached, code, language);
+    activeCache.set(cacheKey, cachedWithTrace, VALID_TTL_MINUTES);
+    setLocalCache(cacheKey, cachedWithTrace, VALID_TTL_MINUTES);
     logger.info("analysis.cache.hit", {
       cache_key: cacheKey,
       language,
@@ -484,7 +513,7 @@ export const analyzeCode = async (
       cache_layer: "service",
     });
     return {
-      ...cached,
+      ...cachedWithTrace,
       source: "cache",
     };
   }
@@ -509,7 +538,11 @@ export const analyzeCode = async (
           cacheKey,
           language
         );
-        const result = parseAndNormalizeAnalysis(rawText);
+        const result = ensureExecutionTrace(
+          parseAndNormalizeAnalysis(rawText),
+          code,
+          language
+        );
         const ttlMinutes = isFallbackResult(result)
           ? FALLBACK_TTL_MINUTES
           : VALID_TTL_MINUTES;
@@ -595,8 +628,9 @@ export const analyzeCode = async (
 
   const currentCacheEntry = getLocalCache(cacheKey) || activeCache.get<AnalysisResponse>(cacheKey);
   if (currentCacheEntry) {
+    const cachedWithTrace = ensureExecutionTrace(currentCacheEntry, code, language);
     return {
-      ...currentCacheEntry,
+      ...cachedWithTrace,
       source: "cache",
     };
   }
