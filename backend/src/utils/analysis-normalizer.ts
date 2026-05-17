@@ -1,9 +1,41 @@
-import { AnalysisResponse, TimeComplexity } from "../types/analysis";
+import { AnalysisResponse, TimeComplexity, TraceStep } from "../types/analysis";
 
 type CoreAnalysis = Pick<
   AnalysisResponse,
-  "pseudocode" | "algorithm_steps" | "time_complexity" | "space_complexity"
+  | "pseudocode"
+  | "algorithm_steps"
+  | "time_complexity"
+  | "space_complexity"
+  | "execution_trace"
 >;
+
+const normalizeTrace = (value: unknown): TraceStep[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object")
+    .map((item, index) => ({
+      step:
+        typeof item.step === "number" && Number.isFinite(item.step)
+          ? item.step
+          : index + 1,
+      line_number:
+        typeof item.line_number === "number" && Number.isFinite(item.line_number)
+          ? item.line_number
+          : null,
+      event_type: typeof item.event_type === "string" ? item.event_type : null,
+      variables:
+        item.variables && typeof item.variables === "object" && !Array.isArray(item.variables)
+          ? (item.variables as Record<string, unknown>)
+          : null,
+      call_stack: Array.isArray(item.call_stack)
+        ? item.call_stack.filter((entry): entry is string => typeof entry === "string")
+        : null,
+      return_value: "return_value" in item ? item.return_value : null,
+    }));
+};
 
 export const extractArray = (obj: any, key: string): string[] => {
   if (!Array.isArray(obj?.[key])) {
@@ -85,6 +117,7 @@ export const normalizeAnalysis = (raw: any): CoreAnalysis => {
     algorithm_steps: normalizeAlgorithmSteps(raw),
     time_complexity: normalizeTimeComplexity(raw?.time_complexity),
     space_complexity: normalizeSpaceComplexity(raw?.space_complexity),
+    execution_trace: normalizeTrace(raw?.execution_trace),
   };
 };
 
