@@ -16,6 +16,8 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useSessionBuffer } from "@/hooks/useSessionBuffer";
 import { getStoredThreadId, setStoredThreadId } from "@/hooks/useLocalChat";
+import { saveTraceWorkspaceSnapshot } from "@/lib/trace-workspace";
+import { type TraceStep } from "@/lib/trace-visualizer";
 
 type AnalysisData = {
   pseudocode: string[];
@@ -39,15 +41,6 @@ type ExecutionData = {
   };
 };
 
-type TraceStep = {
-  step: number;
-  line_number?: number | null;
-  event_type?: string | null;
-  variables?: Record<string, unknown> | null;
-  call_stack?: string[] | null;
-  return_value?: unknown;
-};
-
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
 });
@@ -61,6 +54,7 @@ function EditorWorkspace() {
   const { accessToken, loading: authLoading, session, signOut } = useAuth();
   const [code, setCode] = useState("console.log(2+3)");
   const [language, setLanguage] = useState("javascript");
+  const [stdin, setStdin] = useState("");
   const [result, setResult] = useState<ExecutionData | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -72,11 +66,8 @@ function EditorWorkspace() {
   const [restoringSession, setRestoringSession] = useState(false);
   const [restoredSessionTitle, setRestoredSessionTitle] = useState<string | null>(null);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
-  const [traceIndex, setTraceIndex] = useState(0);
-  const [isTracePlaying, setIsTracePlaying] = useState(false);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
-  const decorationIdsRef = useRef<string[]>([]);
   const { appendExecution, flush, hydrateSession, saveError, sessionId } =
     useSessionBuffer(accessToken);
   const requestedSessionId = searchParams.get("sessionId");
@@ -130,10 +121,6 @@ function EditorWorkspace() {
     }),
     [analysis, code, derivedTitle, language, result]
   );
-  const currentTraceStep = traceSteps[traceIndex] ?? null;
-  const traceVariables = currentTraceStep?.variables
-    ? Object.entries(currentTraceStep.variables)
-    : [];
 
   useEffect(() => {
     if (requestedSessionId && accessToken) {
@@ -153,53 +140,17 @@ function EditorWorkspace() {
   }, [accessToken, flush, requestedSessionId]);
 
   useEffect(() => {
-    if (!isTracePlaying || traceSteps.length <= 1) {
-      return;
-    }
-
-    const timer = window.setInterval(() => {
-      setTraceIndex((current) => {
-        if (current >= traceSteps.length - 1) {
-          setIsTracePlaying(false);
-          return current;
-        }
-
-        return current + 1;
-      });
-    }, 800);
-
-    return () => {
-      window.clearInterval(timer);
-    };
-  }, [isTracePlaying, traceSteps.length]);
-
-  useEffect(() => {
-    const editor = editorRef.current;
-    const monaco = monacoRef.current;
-
-    if (!editor || !monaco) {
-      return;
-    }
-
-    const lineNumber = currentTraceStep?.line_number;
-    if (!lineNumber) {
-      decorationIdsRef.current = editor.deltaDecorations(decorationIdsRef.current, []);
-      return;
-    }
-
-    decorationIdsRef.current = editor.deltaDecorations(decorationIdsRef.current, [
-      {
-        range: new monaco.Range(lineNumber, 1, lineNumber, 1),
-        options: {
-          isWholeLine: true,
-          className: "codevista-active-line",
-          glyphMarginClassName: "codevista-active-line-glyph",
-        },
-      },
-    ]);
-
-    editor.revealLineInCenter(lineNumber);
-  }, [currentTraceStep]);
+    saveTraceWorkspaceSnapshot({
+      title: derivedTitle,
+      language,
+      code,
+      traceSteps,
+      runtimeMs: result?.runtime_ms ?? null,
+      memoryKb: result?.memory_kb ?? null,
+      sessionId: sessionId ?? requestedSessionId ?? null,
+      capturedAt: new Date().toISOString(),
+    });
+  }, [code, derivedTitle, language, requestedSessionId, result, sessionId, traceSteps]);
 
   useEffect(() => {
     if (!requestedSessionId || !accessToken) {
@@ -277,14 +228,10 @@ function EditorWorkspace() {
             latestExecution.analysis?.execution_trace ?? []
           );
           setTraceSteps(restoredTrace);
-          setTraceIndex(0);
-          setIsTracePlaying(false);
         } else {
           setResult(null);
           setAnalysis(null);
           setTraceSteps([]);
-          setTraceIndex(0);
-          setIsTracePlaying(false);
         }
 
         setActiveTab("analysis");
@@ -333,10 +280,8 @@ function EditorWorkspace() {
       setActiveTab("output");
       setAnalysis(null);
       setTraceSteps([]);
-      setTraceIndex(0);
-      setIsTracePlaying(false);
 
-      const payload = JSON.stringify({ code, language });
+      const executionPayload = JSON.stringify({ code, language, stdin });
       const headers = {
         "Content-Type": "application/json",
       };
@@ -344,12 +289,12 @@ function EditorWorkspace() {
       const executionRequest = fetch(`${API_BASE_URL}/execution`, {
         method: "POST",
         headers,
-        body: payload,
+        body: executionPayload,
       });
       const analysisRequest = fetch(`${API_BASE_URL}/analysis`, {
         method: "POST",
         headers,
-        body: payload,
+        body: executionPayload,
       })
         .then(async (response) => ({
           response,
@@ -378,6 +323,8 @@ function EditorWorkspace() {
 
       const analysisResult = await analysisRequest;
       const analysisRes = analysisResult.response;
+      const analysisRequestError =
+        "error" in analysisResult ? analysisResult.error : null;
       const analysisData = analysisResult.data as
         | {
             error?: string;
@@ -390,12 +337,13 @@ function EditorWorkspace() {
               worst: string;
             };
             space_complexity?: string;
+            source?: "cache" | "gemini" | "groq";
             execution_trace?: unknown[];
             explanation?: string;
           }
         | null;
 
-      if (!analysisRes || analysisResult.error || !analysisData || analysisData.error) {
+      if (!analysisRes || analysisRequestError || !analysisData || analysisData.error) {
         setAnalysisError(
           analysisData?.message ||
             "⚠️ Analysis is unavailable right now. Please try again."
@@ -403,11 +351,19 @@ function EditorWorkspace() {
         return;
       }
 
-      setAnalysis(analysisData);
+      setAnalysis({
+        pseudocode: analysisData.pseudocode || [],
+        algorithm_steps: analysisData.algorithm_steps || [],
+        time_complexity: analysisData.time_complexity || {
+          best: "",
+          average: "",
+          worst: "",
+        },
+        space_complexity: analysisData.space_complexity || "",
+        source: analysisData.source || "cache",
+      });
       const nextTraceSteps = normalizeTrace(analysisData.execution_trace || []);
       setTraceSteps(nextTraceSteps);
-      setTraceIndex(0);
-      setIsTracePlaying(false);
 
       if (accessToken) {
         appendExecution(
@@ -457,8 +413,8 @@ function EditorWorkspace() {
 
   return (
     <div className="min-h-screen bg-[#020617] text-white flex justify-center px-3 py-3">
-      <div className="w-full max-w-[1400px] min-h-[calc(100vh-24px)] flex flex-col">
-        <div className="mb-3 flex items-center justify-between px-1">
+      <div className="w-full max-w-[1400px] min-h-[calc(100vh-24px)] flex flex-col gap-3">
+        <div className="flex items-center justify-between px-1">
           <div>
             <h1 className="text-lg font-semibold text-indigo-400">CodeVista</h1>
             <p className="text-[11px] text-gray-400">
@@ -494,8 +450,7 @@ function EditorWorkspace() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 p-[12px] rounded-2xl bg-[#0b1220]/60 border border-white/10 backdrop-blur-xl">
-          <div className="h-full min-h-0 rounded-xl overflow-hidden border border-white/5 flex flex-col lg:flex-row">
+        <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
             <div className="lg:w-[70%] min-h-[420px] lg:min-h-0 flex flex-col bg-[#0f172a]">
               <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10 bg-[#111827]">
                 <select
@@ -534,6 +489,32 @@ function EditorWorkspace() {
                     minimap: { enabled: false },
                     smoothScrolling: true,
                   }}
+                />
+              </div>
+
+              <div className="border-t border-white/10 bg-[#0b1220] p-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-sm text-gray-200">Program Input</h3>
+                    <p className="text-[11px] text-gray-500">
+                      Values sent to `input()` / stdin, one line per entry.
+                    </p>
+                  </div>
+                  {stdin ? (
+                    <button
+                      type="button"
+                      onClick={() => setStdin("")}
+                      className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-gray-400 transition hover:text-white"
+                    >
+                      Clear
+                    </button>
+                  ) : null}
+                </div>
+                <textarea
+                  value={stdin}
+                  onChange={(event) => setStdin(event.target.value)}
+                  placeholder={"5\nor\nAlice\n42"}
+                  className="min-h-[96px] w-full resize-y rounded-xl border border-white/10 bg-[#020617] px-3 py-3 font-mono text-sm text-gray-200 outline-none transition placeholder:text-gray-500 focus:border-indigo-400/50"
                 />
               </div>
             </div>
@@ -597,6 +578,21 @@ function EditorWorkspace() {
                   }`}
                 >
                   Analysis
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    router.push(
+                      requestedSessionId
+                        ? `/editor/insights?sessionId=${encodeURIComponent(requestedSessionId)}`
+                        : "/editor/insights"
+                    )
+                  }
+                  className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
+                    "text-gray-400 hover:bg-white/5 hover:text-white"
+                  }`}
+                >
+                  Visualizer
                 </button>
               </div>
 
@@ -675,141 +671,8 @@ function EditorWorkspace() {
                   )}
                 </AnimatePresence>
               </div>
-
-              <div className="rounded-xl border border-white/10 bg-[#111827] p-3">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-sm text-gray-200">Execution Insights</h3>
-                    <p className="text-[11px] text-gray-500">
-                      {traceSteps.length > 0
-                        ? `Step ${traceIndex + 1} of ${traceSteps.length}`
-                        : "Trace data will appear here when available."}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={traceSteps.length === 0 || traceIndex === 0}
-                      onClick={() => {
-                        setIsTracePlaying(false);
-                        setTraceIndex((current) => Math.max(current - 1, 0));
-                      }}
-                      className="rounded-md border border-white/10 px-2 py-1 text-xs text-gray-300 disabled:opacity-40"
-                    >
-                      Back
-                    </button>
-                    <button
-                      type="button"
-                      disabled={traceSteps.length <= 1}
-                      onClick={() => {
-                        setIsTracePlaying((current) => !current);
-                      }}
-                      className="rounded-md border border-indigo-400/20 bg-indigo-500/10 px-2 py-1 text-xs text-indigo-200 disabled:opacity-40"
-                    >
-                      {isTracePlaying ? "Pause" : "Play"}
-                    </button>
-                    <button
-                      type="button"
-                      disabled={
-                        traceSteps.length === 0 || traceIndex >= traceSteps.length - 1
-                      }
-                      onClick={() => {
-                        setIsTracePlaying(false);
-                        setTraceIndex((current) =>
-                          Math.min(current + 1, traceSteps.length - 1)
-                        );
-                      }}
-                      className="rounded-md border border-white/10 px-2 py-1 text-xs text-gray-300 disabled:opacity-40"
-                    >
-                      Next
-                    </button>
-                  </div>
-                </div>
-
-                <div className="grid gap-3">
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                        Active Line
-                      </p>
-                      <p className="mt-2 font-mono text-sm text-indigo-300">
-                        {currentTraceStep?.line_number ?? "--"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                        Event
-                      </p>
-                      <p className="mt-2 font-mono text-sm text-cyan-300">
-                        {currentTraceStep?.event_type ?? "--"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                        Return Flow
-                      </p>
-                      <p className="mt-2 font-mono text-sm text-emerald-300 break-all">
-                        {currentTraceStep?.return_value == null
-                          ? "--"
-                          : JSON.stringify(currentTraceStep.return_value)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                        Call Stack
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {currentTraceStep?.call_stack?.length ? (
-                          currentTraceStep.call_stack.map((frame, index) => (
-                            <div
-                              key={`${frame}-${index}`}
-                              className="rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs text-amber-200"
-                            >
-                              {frame}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-xs text-gray-500">
-                            No call stack data yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="rounded-lg border border-white/10 bg-[#0b1220] p-3">
-                      <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
-                        Variable State
-                      </p>
-                      <div className="mt-2 space-y-2">
-                        {traceVariables.length > 0 ? (
-                          traceVariables.map(([name, value]) => (
-                            <div
-                              key={name}
-                              className="flex items-start justify-between gap-3 rounded-md border border-white/10 bg-white/5 px-2 py-1 font-mono text-xs"
-                            >
-                              <span className="text-sky-200">{name}</span>
-                              <span className="text-gray-300 break-all text-right">
-                                {JSON.stringify(value)}
-                              </span>
-                            </div>
-                          ))
-                        ) : (
-                          <div className="text-xs text-gray-500">
-                            No variable snapshot data yet.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
-        </div>
       </div>
 
       {chatThreadId ? (
@@ -821,21 +684,6 @@ function EditorWorkspace() {
           context={chatContext}
         />
       ) : null}
-
-      <style jsx global>{`
-        .codevista-active-line {
-          background: rgba(99, 102, 241, 0.18);
-          border-top: 1px solid rgba(99, 102, 241, 0.45);
-          border-bottom: 1px solid rgba(99, 102, 241, 0.3);
-        }
-
-        .codevista-active-line-glyph {
-          background: linear-gradient(180deg, #818cf8, #6366f1);
-          width: 6px !important;
-          margin-left: 6px;
-          border-radius: 999px;
-        }
-      `}</style>
     </div>
   );
 }
