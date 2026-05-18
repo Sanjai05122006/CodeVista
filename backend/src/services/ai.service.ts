@@ -6,11 +6,12 @@ import {
   AnalysisResponse,
   AnalysisResult,
   AnalysisSource,
+  TraceStep,
 } from "../types/analysis";
 import { sha256 } from "../utils/hash";
 import { logger } from "../utils/logger";
 import { normalizeAnalysis, safeParse } from "../utils/analysis-normalizer";
-import { traceJavascriptExecution } from "./tracing/javascript-tracer.service";
+import { generateExecutionTrace } from "./tracing/trace.service";
 
 type CacheLike = Pick<typeof cacheService, "get" | "set">;
 type AnalysisProvider = (prompt: string) => Promise<string>;
@@ -374,25 +375,17 @@ const parseAndNormalizeAnalysis = (rawText: string): AnalysisResponse => {
 
 const ensureExecutionTrace = (
   result: AnalysisResponse,
-  code: string,
-  language: string
+  _code: string,
+  _language: string,
+  trace: TraceStep[]
 ): AnalysisResponse => {
-  if (language !== "javascript") {
-    return {
-      ...result,
-      execution_trace: Array.isArray(result.execution_trace)
-        ? result.execution_trace
-        : [],
-    };
-  }
-
   if (Array.isArray(result.execution_trace) && result.execution_trace.length > 0) {
     return result;
   }
 
   return {
     ...result,
-    execution_trace: traceJavascriptExecution(code),
+    execution_trace: trace,
   };
 };
 
@@ -476,7 +469,8 @@ const callProviderWithRateLimit = async (
 export const analyzeCode = async (
   code: string,
   language: string,
-  dependencies: AnalyzeDependencies = {}
+  dependencies: AnalyzeDependencies = {},
+  stdin: string = ""
 ): Promise<AnalysisResult> => {
   const activeCache = dependencies.cache || cacheService;
   const cacheKey = getAnalysisCacheKey(code, language);
@@ -485,10 +479,16 @@ export const analyzeCode = async (
     : dependencies.provider
     ? [{ name: "gemini" as const, provider: dependencies.provider }]
     : ANALYSIS_PROVIDERS;
+  const executionTrace = await generateExecutionTrace(code, language, stdin);
 
   const localCached = getLocalCache(cacheKey);
   if (localCached) {
-    const cachedWithTrace = ensureExecutionTrace(localCached, code, language);
+    const cachedWithTrace = ensureExecutionTrace(
+      localCached,
+      code,
+      language,
+      executionTrace
+    );
     logger.info("analysis.cache.hit", {
       cache_key: cacheKey,
       language,
@@ -503,7 +503,12 @@ export const analyzeCode = async (
 
   const cached = activeCache.get<AnalysisResponse>(cacheKey);
   if (cached) {
-    const cachedWithTrace = ensureExecutionTrace(cached, code, language);
+    const cachedWithTrace = ensureExecutionTrace(
+      cached,
+      code,
+      language,
+      executionTrace
+    );
     activeCache.set(cacheKey, cachedWithTrace, VALID_TTL_MINUTES);
     setLocalCache(cacheKey, cachedWithTrace, VALID_TTL_MINUTES);
     logger.info("analysis.cache.hit", {
@@ -541,7 +546,8 @@ export const analyzeCode = async (
         const result = ensureExecutionTrace(
           parseAndNormalizeAnalysis(rawText),
           code,
-          language
+          language,
+          executionTrace
         );
         const ttlMinutes = isFallbackResult(result)
           ? FALLBACK_TTL_MINUTES
@@ -628,7 +634,12 @@ export const analyzeCode = async (
 
   const currentCacheEntry = getLocalCache(cacheKey) || activeCache.get<AnalysisResponse>(cacheKey);
   if (currentCacheEntry) {
-    const cachedWithTrace = ensureExecutionTrace(currentCacheEntry, code, language);
+    const cachedWithTrace = ensureExecutionTrace(
+      currentCacheEntry,
+      code,
+      language,
+      executionTrace
+    );
     return {
       ...cachedWithTrace,
       source: "cache",
