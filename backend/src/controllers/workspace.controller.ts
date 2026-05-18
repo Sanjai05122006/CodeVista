@@ -4,7 +4,7 @@ import { analyzeCode } from "../services/ai.service";
 
 export const runWorkspace = async (req: Request, res: Response) => {
   try {
-    const { code, language } = req.body;
+    const { code, language, stdin } = req.body;
 
     if (!code || !language) {
       return res.status(400).json({
@@ -13,8 +13,8 @@ export const runWorkspace = async (req: Request, res: Response) => {
     }
 
     const [execution, analysis] = await Promise.all([
-      executeCode(code, language),
-      analyzeCode(code, language),
+      executeCode(code, language, stdin ?? ""),
+      analyzeCode(code, language, {}, stdin ?? ""),
     ]);
 
     return res.status(200).json({

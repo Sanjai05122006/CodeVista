@@ -34,6 +34,7 @@ let nextCleanupAt = Date.now() + DEFAULT_CLEANUP_INTERVAL_MS;
 export const MAX_JSON_BODY_SIZE = "64kb";
 export const MAX_CODE_LENGTH = 20_000;
 export const MAX_LANGUAGE_LENGTH = 32;
+export const MAX_STDIN_LENGTH = 2_000;
 export const MAX_CHAT_MESSAGE_LENGTH = 4_000;
 export const MAX_CHAT_HISTORY_MESSAGES = 20;
 export const MAX_CHAT_BATCH_MESSAGES = 50;
@@ -290,6 +291,23 @@ export const validateExecutionRequest = (
       field: "language",
       maxLength: MAX_LANGUAGE_LENGTH,
     });
+    if (req.body.stdin != null && req.body.stdin !== "") {
+      if (typeof req.body.stdin !== "string") {
+        throw new AppError(
+          "INVALID_REQUEST_BODY",
+          400,
+          "stdin must be a string."
+        );
+      }
+
+      if (req.body.stdin.length > MAX_STDIN_LENGTH) {
+        throw new AppError(
+          "PAYLOAD_TOO_LARGE",
+          413,
+          "stdin exceeds the maximum allowed length."
+        );
+      }
+    }
     next();
   } catch (error) {
     next(error);

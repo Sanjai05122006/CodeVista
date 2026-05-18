@@ -10,7 +10,11 @@ const pistonLanguageMap: Record<string, string> = {
   cpp: "cpp",
 };
 
-export const executePiston = async (code: string, language: string) => {
+export const executePiston = async (
+  code: string,
+  language: string,
+  stdin: string = ""
+) => {
   const pistonLang = pistonLanguageMap[language];
 
   if (!pistonLang) {
@@ -24,6 +28,7 @@ export const executePiston = async (code: string, language: string) => {
         language: pistonLang,
         version: "*",
         files: [{ name: "main", content: code }],
+        stdin,
       },
       {
         timeout: 10000,

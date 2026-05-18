@@ -3,8 +3,20 @@ import { executePiston } from "../integrations/piston";
 import { cacheService } from "./cache.service";
 import { logger } from "../utils/logger";
 
-export const executeCode = async (code: string, language: string) => {
-  const cacheKey = cacheService.getExecutionCacheKey(code, language);
+export const executeCode = (
+  code: string,
+  language: string,
+  stdin: string = ""
+) => {
+  return executeCodeInternal(code, language, stdin);
+};
+
+const executeCodeInternal = async (
+  code: string,
+  language: string,
+  stdin: string
+) => {
+  const cacheKey = cacheService.getExecutionCacheKey(code, language, stdin);
 
   //Check cache
   const cached = cacheService.get(cacheKey);
@@ -30,7 +42,7 @@ export const executeCode = async (code: string, language: string) => {
   //Retry logic (2 attempts)
   for (let i = 0; i < 2; i++) {
     try {
-      const judge0Result = await executeJudge0(code, language);
+      const judge0Result = await executeJudge0(code, language, stdin);
 
       result = {
         ...formatResponse(judge0Result),
@@ -63,7 +75,7 @@ export const executeCode = async (code: string, language: string) => {
     });
 
     try {
-      const pistonResult = await executePiston(code, language);
+      const pistonResult = await executePiston(code, language, stdin);
 
       result = {
         ...formatPistonResponse(pistonResult),

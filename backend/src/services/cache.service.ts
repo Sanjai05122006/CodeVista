@@ -3,10 +3,10 @@ import crypto from "crypto";
 class CacheService {
   private cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
-  private generateKey(code: string, language: string): string {
+  private generateKey(code: string, language: string, stdin: string = ""): string {
     return crypto
       .createHash("sha256")
-      .update(`${code}:${language}`)
+      .update(`${code}:${language}:${stdin}`)
       .digest("hex");
   }
 
@@ -33,8 +33,8 @@ class CacheService {
     return entry.data;
   }
 
-  getExecutionCacheKey(code: string, language: string): string {
-    return `exec:${this.generateKey(code, language)}`;
+  getExecutionCacheKey(code: string, language: string, stdin: string = ""): string {
+    return `exec:${this.generateKey(code, language, stdin)}`;
   }
 
   stats() {

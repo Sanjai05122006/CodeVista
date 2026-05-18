@@ -3,7 +3,7 @@ import { executeCode } from "../services/execution.service";
 
 export const runExecution = async (req: Request, res: Response) => {
   try {
-    const { code, language } = req.body;
+    const { code, language, stdin } = req.body;
 
     if (!code || !language) {
       return res.status(400).json({
@@ -11,7 +11,7 @@ export const runExecution = async (req: Request, res: Response) => {
       });
     }
 
-    const result = await executeCode(code, language);
+    const result = await executeCode(code, language, stdin ?? "");
 
     return res.status(200).json(result);
   } catch (error: any) {

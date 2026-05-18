@@ -11,7 +11,11 @@ const languageMap: Record<string, number> = {
   cpp: 54,
 };
 
-export const executeJudge0 = async (code: string, language: string) => {
+export const executeJudge0 = async (
+  code: string,
+  language: string,
+  stdin: string = ""
+) => {
   const language_id = languageMap[language];
 
   if (!language_id) {
@@ -24,6 +28,7 @@ export const executeJudge0 = async (code: string, language: string) => {
       {
         source_code: code,
         language_id,
+        stdin,
       },
       {
         headers: {
