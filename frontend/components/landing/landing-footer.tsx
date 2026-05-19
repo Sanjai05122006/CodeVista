@@ -1,52 +1,66 @@
-import Link from "next/link";
-import { Code2, Mail } from "lucide-react";
+import { Code2 } from "lucide-react";
+
+const currentYear = new Date().getFullYear();
 
 export function LandingFooter() {
   return (
     <footer className="border-t border-white/60 bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_55%,#ffffff_100%)]">
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-12 lg:grid-cols-[1.2fr_0.8fr] lg:px-10">
-        <div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5] text-white shadow-[0_12px_30px_rgba(99,102,241,0.28)]">
-              <Code2 size={18} />
-            </div>
-            <div>
-              <p className="text-lg font-semibold tracking-tight text-gray-700">
-                CodeVista
-              </p>
-              <p className="text-sm text-gray-500">
-                A cleaner way to write, visualize, and understand code.
-              </p>
-            </div>
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 py-8 lg:flex-row lg:items-center lg:justify-between lg:px-10">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5] text-white shadow-[0_12px_30px_rgba(99,102,241,0.28)]">
+            <Code2 size={18} />
           </div>
-
-          <div className="mt-6 flex items-center gap-3">
-            <a
-              href="https://github.com"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub"
-              className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-gray-600 transition hover:border-[#c7d2fe] hover:text-[#4f46e5]"
-            >
-              <GitHubIcon />
-            </a>
-            <div className="flex items-center gap-3 rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 text-sm text-gray-500">
-              <Mail size={16} className="text-[#6366f1]" />
-              Gmail support coming soon
-            </div>
+          <div>
+            <p className="text-lg font-semibold tracking-tight text-gray-700">
+              CodeVista
+            </p>
+            <p className="text-sm text-gray-500">
+              Copyright {currentYear} CodeVista
+            </p>
           </div>
         </div>
 
-        <div className="grid gap-3 text-sm text-gray-500 sm:grid-cols-2">
-          <FooterLink href="/">Home</FooterLink>
-          <FooterLink href="/editor">Editor</FooterLink>
-          <FooterLink href="/history">Editor History</FooterLink>
-          <FooterLink href="/about">About Us</FooterLink>
-          <FooterLink href="/contact">Contact Us</FooterLink>
-          <FooterLink href="/settings">Settings</FooterLink>
+        <div className="flex items-center gap-3">
+          <SocialLink
+            href="https://github.com"
+            label="GitHub"
+            icon={<GitHubIcon />}
+          />
+          <SocialLink
+            href="https://twitter.com"
+            label="Twitter"
+            icon={<TwitterIcon />}
+          />
+          <SocialLink
+            href="https://instagram.com"
+            label="Instagram"
+            icon={<InstagramIcon />}
+          />
         </div>
       </div>
     </footer>
+  );
+}
+
+function SocialLink({
+  href,
+  label,
+  icon,
+}: {
+  href: string;
+  label: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      aria-label={label}
+      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-gray-600 transition hover:border-[#c7d2fe] hover:text-[#4f46e5]"
+    >
+      {icon}
+    </a>
   );
 }
 
@@ -62,19 +76,26 @@ function GitHubIcon() {
   );
 }
 
-function FooterLink({
-  href,
-  children,
-}: {
-  href: string;
-  children: React.ReactNode;
-}) {
+function TwitterIcon() {
   return (
-    <Link
-      href={href}
-      className="rounded-2xl border border-[#e5e7eb] bg-white px-4 py-3 font-medium text-gray-600 transition hover:border-[#c7d2fe] hover:text-[#4f46e5]"
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[18px] w-[18px] fill-current"
+      aria-hidden="true"
     >
-      {children}
-    </Link>
+      <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.25l-4.9-6.4L6.46 22H3.35l7.24-8.28L1 2h6.4l4.43 5.86L18.9 2Zm-1.1 18h1.73L6.47 3.9H4.61L17.8 20Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="h-[18px] w-[18px] fill-current"
+      aria-hidden="true"
+    >
+      <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5ZM17.7 5.15a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3ZM12 6.6A5.4 5.4 0 1 1 6.6 12 5.4 5.4 0 0 1 12 6.6Zm0 1.8A3.6 3.6 0 1 0 15.6 12 3.6 3.6 0 0 0 12 8.4Z" />
+    </svg>
   );
 }

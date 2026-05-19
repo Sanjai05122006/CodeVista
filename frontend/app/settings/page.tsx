@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Bell, Shield, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { PublicPageFrame } from "@/components/layout/public-page-frame";
 
 const settingCards = [
   {
@@ -38,8 +39,9 @@ export default function SettingsPage() {
   }, [loading, router, session]);
 
   return (
-    <main className="min-h-screen bg-[#f8fafc] px-6 py-16 text-[#111827]">
-      <div className="mx-auto max-w-5xl rounded-[32px] border border-white/70 bg-[linear-gradient(145deg,#eef2ff,#f8fafc,#ffffff)] p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
+    <PublicPageFrame>
+      <main className="px-6 py-10 pb-16 text-[#111827]">
+        <div className="mx-auto max-w-5xl rounded-[32px] border border-white/70 bg-[linear-gradient(145deg,#eef2ff,#f8fafc,#ffffff)] p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
         <div className="max-w-2xl">
           <div className="inline-flex items-center gap-2 rounded-full border border-[#c7d2fe] bg-white px-4 py-1.5 text-sm text-[#4f46e5]">
             <Shield size={15} />
@@ -88,7 +90,8 @@ export default function SettingsPage() {
             Open Editor
           </Link>
         </div>
-      </div>
-    </main>
+        </div>
+      </main>
+    </PublicPageFrame>
   );
 }

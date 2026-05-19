@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { User } from "@supabase/supabase-js";
-import { ChevronDown, Code2, LogOut, Settings } from "lucide-react";
+import { Code2, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
 function getUserInitial(user: User | null) {
@@ -16,7 +16,7 @@ function getUserInitial(user: User | null) {
 const navItems = [
   { href: "/", label: "Home" },
   { href: "/editor", label: "Editor" },
-  { href: "/history", label: "Editor History" },
+  { href: "/history", label: "History" },
   { href: "/about", label: "About Us" },
   { href: "/contact", label: "Contact Us" },
 ];
@@ -85,7 +85,7 @@ export function LandingHeader({ user }: { user: User | null }) {
         ))}
         <div className="ml-auto flex items-center gap-2">
           {user ? (
-            <ProfileMenu user={user} onSignOut={handleSignOut} compact />
+            <ProfileMenu user={user} onSignOut={handleSignOut} />
           ) : (
             <>
               <Link
@@ -111,30 +111,16 @@ export function LandingHeader({ user }: { user: User | null }) {
 function ProfileMenu({
   user,
   onSignOut,
-  compact = false,
 }: {
   user: User;
   onSignOut: () => Promise<void>;
-  compact?: boolean;
 }) {
   return (
     <details className="group relative">
-      <summary className="flex cursor-pointer list-none items-center gap-3 rounded-full border border-white/70 bg-white/85 px-3 py-2 shadow-sm backdrop-blur transition hover:border-[#c7d2fe]">
+      <summary className="flex cursor-pointer list-none items-center rounded-full border border-white/70 bg-white/85 p-2 shadow-sm backdrop-blur transition hover:border-[#c7d2fe]">
         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5] text-sm font-semibold text-white">
           {getUserInitial(user)}
         </div>
-        {!compact && (
-          <div className="max-w-[180px] text-left">
-            <p className="truncate text-sm font-medium text-gray-700">
-              {user.user_metadata?.display_name || "Signed in"}
-            </p>
-            <p className="truncate text-xs text-gray-400">{user.email}</p>
-          </div>
-        )}
-        <ChevronDown
-          size={16}
-          className="text-gray-400 transition group-open:rotate-180"
-        />
       </summary>
 
       <div className="absolute right-0 z-20 mt-3 w-60 rounded-3xl border border-[#e5e7eb] bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
