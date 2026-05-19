@@ -1,4 +1,4 @@
-import { db, supabaseAdmin } from "../config/db";
+import { supabaseAdmin } from "../config/db";
 import { AppError } from "../middleware/error.middleware";
 
 /* =========================
@@ -75,6 +75,13 @@ type AIOutputRecord = {
   execution_trace: unknown[] | null;
 };
 
+type HistoryExecutionRecord = {
+  id: string;
+  session_id: string;
+  language: string | null;
+  created_at: string | null;
+};
+
 /* =========================
    HELPERS
 ========================= */
@@ -85,6 +92,76 @@ const validateExecutions = (payload: SaveSessionInput) => {
   }
 
   return payload.executions;
+};
+
+const toTitleCase = (value: string) =>
+  value
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ");
+
+const isWeakSessionTitle = (title: string | null | undefined) => {
+  if (!title) {
+    return true;
+  }
+
+  const trimmed = title.trim();
+  if (!trimmed) {
+    return true;
+  }
+
+  if (trimmed.length > 72) {
+    return true;
+  }
+
+  if (/[{}[\];=>]/.test(trimmed)) {
+    return true;
+  }
+
+  if (/^(const|let|var|function|class|def|print|console\.log|if|for|while)\b/i.test(trimmed)) {
+    return true;
+  }
+
+  return false;
+};
+
+const deriveTitleFromAiOutput = (
+  ai: Pick<AIOutputRecord, "pseudocode" | "algorithm_steps"> | null | undefined
+) => {
+  const pseudocode = ai?.pseudocode
+    ?.split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean) ?? [];
+  const firstPseudoLine = pseudocode.find((line) => /^FUNCTION\s+/i.test(line));
+
+  if (firstPseudoLine) {
+    const match = firstPseudoLine.match(/^FUNCTION\s+([A-Za-z0-9_ ]+)/i);
+    const candidate = match?.[1]?.replace(/\s+/g, " ").trim();
+
+    if (candidate) {
+      return toTitleCase(candidate.replace(/_/g, " "));
+    }
+  }
+
+  const firstStep = Array.isArray(ai?.algorithm_steps)
+    ? ai.algorithm_steps.find((step) => typeof step === "string" && step.trim().length > 0)
+    : null;
+
+  if (firstStep) {
+    const cleaned = firstStep
+      .replace(/^step\s*\d+[:.)-]?\s*/i, "")
+      .replace(/\b(return|initialize|set|add|loop through|iterate through)\b/gi, "")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    if (cleaned) {
+      return cleaned.charAt(0).toUpperCase() + cleaned.slice(1, 70);
+    }
+  }
+
+  return null;
 };
 
 /* =========================
@@ -233,12 +310,37 @@ export const getSessionHistory = async (
     throw new Error(`HISTORY_EXECUTIONS_FETCH_FAILED: ${executionsError.message}`);
   }
 
+  const typedExecutions = (executions ?? []) as HistoryExecutionRecord[];
+  const executionIds = typedExecutions.map((execution) => execution.id);
+  const { data: aiOutputs, error: aiOutputsError } =
+    executionIds.length > 0
+      ? await supabaseAdmin
+          .from("ai_outputs")
+          .select("execution_id, pseudocode, algorithm_steps")
+          .in("execution_id", executionIds)
+      : { data: [], error: null as null };
+
+  if (aiOutputsError) {
+    throw new Error(`HISTORY_AI_OUTPUTS_FETCH_FAILED: ${aiOutputsError.message}`);
+  }
+
+  const aiOutputsByExecutionId = new Map(
+    ((aiOutputs ?? []) as Array<
+      Pick<AIOutputRecord, "execution_id" | "pseudocode" | "algorithm_steps">
+    >).map((row) => [row.execution_id, row])
+  );
+
   const executionMap = new Map<
     string,
-    { language: string | null; execution_count: number; created_at: string | null }
+    {
+      language: string | null;
+      execution_count: number;
+      created_at: string | null;
+      latest_execution_id: string | null;
+    }
   >();
 
-  for (const execution of executions ?? []) {
+  for (const execution of typedExecutions) {
     const existing = executionMap.get(execution.session_id);
 
     if (!existing) {
@@ -246,6 +348,7 @@ export const getSessionHistory = async (
         language: execution.language ?? null,
         execution_count: 1,
         created_at: execution.created_at ?? null,
+        latest_execution_id: execution.id,
       });
       continue;
     }
@@ -257,14 +360,22 @@ export const getSessionHistory = async (
     if (nextCreatedAt > existingCreatedAt) {
       existing.language = execution.language ?? existing.language;
       existing.created_at = execution.created_at ?? existing.created_at;
+      existing.latest_execution_id = execution.id;
     }
   }
 
   return sessions.map((session) => {
     const executionMeta = executionMap.get(session.id);
+    const aiTitle =
+      executionMeta?.latest_execution_id
+        ? deriveTitleFromAiOutput(
+            aiOutputsByExecutionId.get(executionMeta.latest_execution_id) ?? null
+          )
+        : null;
 
     return {
       ...session,
+      title: isWeakSessionTitle(session.title) ? aiTitle ?? session.title : session.title,
       language: executionMeta?.language ?? null,
       execution_count: executionMeta?.execution_count ?? 0,
     };
@@ -391,16 +502,23 @@ export const getSessionDetail = async (
     };
   });
 
-  const { rows: threadRows } = await db.query(
-    `SELECT id, title, session_id, updated_at
-     FROM chat_threads
-     WHERE session_id = $1 AND user_id = $2
-     ORDER BY updated_at DESC
-     LIMIT 1`,
-    [sessionId, userId]
-  );
+  const { data: activeThread, error: threadError } = await supabaseAdmin
+    .from("chat_threads")
+    .select("id, title, session_id, updated_at")
+    .eq("session_id", sessionId)
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
 
-  const activeThread = threadRows[0] ?? null;
+  if (threadError) {
+    throw new AppError(
+      "SESSION_DETAIL_FAILED",
+      500,
+      `CHAT_THREAD_FETCH_FAILED: ${threadError.message}`
+    );
+  }
+
   let chatMessages: Array<{
     id: string;
     thread_id: string;
@@ -414,23 +532,23 @@ export const getSessionDetail = async (
   }> = [];
 
   if (activeThread) {
-    const { rows } = await db.query(
-      `SELECT id,
-              thread_id,
-              role,
-              content,
-              sequence,
-              provider,
-              model,
-              created_at,
-              updated_at
-       FROM chat_messages
-       WHERE thread_id = $1
-       ORDER BY sequence ASC`,
-      [activeThread.id]
-    );
+    const { data: messages, error: messagesError } = await supabaseAdmin
+      .from("chat_messages")
+      .select(
+        "id, thread_id, role, content, sequence, provider, model, created_at, updated_at"
+      )
+      .eq("thread_id", activeThread.id)
+      .order("sequence", { ascending: true });
 
-    chatMessages = rows;
+    if (messagesError) {
+      throw new AppError(
+        "SESSION_DETAIL_FAILED",
+        500,
+        `CHAT_MESSAGES_FETCH_FAILED: ${messagesError.message}`
+      );
+    }
+
+    chatMessages = messages ?? [];
   }
 
   return {

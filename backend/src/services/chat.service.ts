@@ -1,4 +1,4 @@
-import { db } from "../config/db";
+import { supabaseAdmin } from "../config/db";
 import { AppError } from "../middleware/error.middleware";
 
 export type ChatMessageInput = {
@@ -78,15 +78,14 @@ const normalizeMessages = (messages: unknown): ChatMessageInput[] => {
 };
 
 const assertOwnedSession = async (userId: string, sessionId: string) => {
-  const { rows } = await db.query(
-    `SELECT id
-     FROM sessions
-     WHERE id = $1 AND user_id = $2
-     LIMIT 1`,
-    [sessionId, userId]
-  );
+  const { data, error } = await supabaseAdmin
+    .from("sessions")
+    .select("id")
+    .eq("id", sessionId)
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (rows.length === 0) {
+  if (error || !data) {
     throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
   }
 };
@@ -109,38 +108,59 @@ const ensureChatThread = async ({
     await assertOwnedSession(userId, sessionId);
   }
 
-  const { rows: threadRows } = await db.query(
-    `SELECT id, user_id, session_id
-     FROM chat_threads
-     WHERE id = $1
-     LIMIT 1`,
-    [threadId]
-  );
+  const { data: existingThread, error: threadLookupError } = await supabaseAdmin
+    .from("chat_threads")
+    .select("id, user_id, session_id")
+    .eq("id", threadId)
+    .maybeSingle();
 
-  if (threadRows.length === 0) {
-    await db.query(
-      `INSERT INTO chat_threads (id, session_id, user_id, title)
-       VALUES ($1, $2, $3, $4)`,
-      [threadId, sessionId ?? null, userId, title ?? null]
+  if (threadLookupError) {
+    throw new AppError(
+      "CHAT_THREAD_LOOKUP_FAILED",
+      500,
+      `CHAT_THREAD_LOOKUP_FAILED: ${threadLookupError.message}`
     );
+  }
+
+  if (!existingThread) {
+    const { error: insertError } = await supabaseAdmin.from("chat_threads").insert({
+      id: threadId,
+      session_id: sessionId ?? null,
+      user_id: userId,
+      title: title ?? null,
+    });
+
+    if (insertError) {
+      throw new AppError(
+        "CHAT_THREAD_CREATE_FAILED",
+        500,
+        `CHAT_THREAD_CREATE_FAILED: ${insertError.message}`
+      );
+    }
     return;
   }
 
-  const thread = threadRows[0];
-
-  if (thread.user_id !== userId) {
+  if (existingThread.user_id !== userId) {
     throw new AppError("FORBIDDEN", 403, "THREAD_ACCESS_DENIED");
   }
 
-  await db.query(
-    `UPDATE chat_threads
-     SET
-       session_id = COALESCE(chat_threads.session_id, $2),
-       title = COALESCE($3, chat_threads.title),
-       updated_at = now()
-     WHERE id = $1 AND user_id = $4`,
-    [threadId, sessionId ?? null, title ?? null, userId]
-  );
+  const { error: updateError } = await supabaseAdmin
+    .from("chat_threads")
+    .update({
+      session_id: existingThread.session_id ?? sessionId ?? null,
+      title: title ?? undefined,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", threadId)
+    .eq("user_id", userId);
+
+  if (updateError) {
+    throw new AppError(
+      "CHAT_THREAD_UPDATE_FAILED",
+      500,
+      `CHAT_THREAD_UPDATE_FAILED: ${updateError.message}`
+    );
+  }
 };
 
 export const insertMessagesBatch = async (
@@ -162,33 +182,29 @@ export const insertMessagesBatch = async (
     userId,
   });
 
-  const values: Array<string | number | null> = [];
-  const placeholders: string[] = [];
+  const messageRows = normalizedMessages.map((msg, index) => ({
+    thread_id: effectiveThreadId,
+    role: msg.role,
+    content: msg.content,
+    sequence: msg.sequence ?? index + 1,
+    provider: msg.provider ?? null,
+    model: msg.model ?? null,
+  }));
 
-  normalizedMessages.forEach((msg, index) => {
-    const base = index * 6;
+  const { error: upsertError } = await supabaseAdmin
+    .from("chat_messages")
+    .upsert(messageRows, {
+      onConflict: "thread_id,sequence",
+      ignoreDuplicates: true,
+    });
 
-    placeholders.push(
-      `($${base + 1}, $${base + 2}, $${base + 3}, $${base + 4}, $${base + 5}, $${base + 6})`
+  if (upsertError) {
+    throw new AppError(
+      "CHAT_MESSAGES_UPSERT_FAILED",
+      500,
+      `CHAT_MESSAGES_UPSERT_FAILED: ${upsertError.message}`
     );
-
-    values.push(
-      effectiveThreadId,
-      msg.role,
-      msg.content,
-      msg.sequence ?? index + 1,
-      msg.provider ?? null,
-      msg.model ?? null
-    );
-  });
-
-  await db.query(
-    `INSERT INTO chat_messages
-     (thread_id, role, content, sequence, provider, model)
-     VALUES ${placeholders.join(",")}
-     ON CONFLICT (thread_id, sequence) DO NOTHING`,
-    values
-  );
+  }
 };
 
 export const getChatMessages = async (userId: string, threadId: string) => {
@@ -200,38 +216,44 @@ export const getChatMessages = async (userId: string, threadId: string) => {
     throw new AppError("INVALID_REQUEST_BODY", 400, "THREAD_ID_REQUIRED");
   }
 
-  const { rows } = await db.query(
-    `SELECT message.id,
-            message.thread_id,
-            message.role,
-            message.content,
-            message.sequence,
-            message.provider,
-            message.model,
-            message.created_at,
-            message.updated_at
-     FROM chat_messages AS message
-     INNER JOIN chat_threads AS thread
-       ON thread.id = message.thread_id
-     WHERE message.thread_id = $1
-       AND thread.user_id = $2
-     ORDER BY message.sequence ASC`,
-    [threadId, userId]
-  );
+  const { data: thread, error: threadError } = await supabaseAdmin
+    .from("chat_threads")
+    .select("id")
+    .eq("id", threadId)
+    .eq("user_id", userId)
+    .maybeSingle();
 
-  if (rows.length === 0) {
-    const { rows: threadRows } = await db.query(
-      `SELECT id
-       FROM chat_threads
-       WHERE id = $1 AND user_id = $2
-       LIMIT 1`,
-      [threadId, userId]
+  if (threadError) {
+    throw new AppError(
+      "CHAT_THREAD_LOOKUP_FAILED",
+      500,
+      `CHAT_THREAD_LOOKUP_FAILED: ${threadError.message}`
     );
-
-    if (threadRows.length === 0) {
-      throw new AppError("THREAD_NOT_FOUND", 404, "THREAD_NOT_FOUND");
-    }
   }
 
-  return rows;
+  if (!thread) {
+    throw new AppError("THREAD_NOT_FOUND", 404, "THREAD_NOT_FOUND");
+  }
+
+  const { data: messages, error: messagesError } = await supabaseAdmin
+    .from("chat_messages")
+    .select(
+      "id, thread_id, role, content, sequence, provider, model, created_at, updated_at"
+    )
+    .eq("thread_id", threadId)
+    .order("sequence", { ascending: true });
+
+  if (messagesError) {
+    throw new AppError(
+      "CHAT_FETCH_FAILED",
+      500,
+      `CHAT_FETCH_FAILED: ${messagesError.message}`
+    );
+  }
+
+  if (!messages || messages.length === 0) {
+    return [];
+  }
+
+  return messages;
 };
