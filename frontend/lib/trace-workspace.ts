@@ -1,4 +1,5 @@
 import type { TraceStep } from "@/lib/trace-visualizer";
+import { resolveSessionTitle } from "@/lib/session-title";
 
 const TRACE_WORKSPACE_STORAGE_KEY = "codevista-trace-workspace";
 const TRACE_WORKSPACE_EVENT = "codevista-trace-workspace-change";
@@ -82,10 +83,14 @@ export const readTraceWorkspaceSnapshot = (): TraceWorkspaceSnapshot | null => {
       return null;
     }
 
+    const code = typeof parsed.code === "string" ? parsed.code : "";
     const snapshot = {
-      title: typeof parsed.title === "string" ? parsed.title : "Execution Insights",
+      title: resolveSessionTitle({
+        code,
+        preferredTitle: typeof parsed.title === "string" ? parsed.title : null,
+      }),
       language: typeof parsed.language === "string" ? parsed.language : "javascript",
-      code: typeof parsed.code === "string" ? parsed.code : "",
+      code,
       traceSteps: normalizeTraceSteps(parsed.traceSteps),
       runtimeMs:
         typeof parsed.runtimeMs === "number" && Number.isFinite(parsed.runtimeMs)

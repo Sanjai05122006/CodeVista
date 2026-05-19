@@ -18,6 +18,7 @@ import { useSessionBuffer } from "@/hooks/useSessionBuffer";
 import { getStoredThreadId, setStoredThreadId } from "@/hooks/useLocalChat";
 import { saveTraceWorkspaceSnapshot } from "@/lib/trace-workspace";
 import { type TraceStep } from "@/lib/trace-visualizer";
+import { deriveSessionTitle } from "@/lib/session-title";
 
 type AnalysisData = {
   pseudocode: string[];
@@ -39,6 +40,22 @@ type ExecutionData = {
   error?: {
     message?: string;
   };
+};
+
+type AnalysisResponsePayload = {
+  error?: string;
+  message?: string;
+  pseudocode?: string[];
+  algorithm_steps?: string[];
+  time_complexity?: {
+    best: string;
+    average: string;
+    worst: string;
+  };
+  space_complexity?: string;
+  source?: "cache" | "gemini" | "groq";
+  execution_trace?: unknown[];
+  explanation?: string;
 };
 
 const Editor = dynamic(() => import("@monaco-editor/react"), {
@@ -65,6 +82,7 @@ function EditorWorkspace() {
   const [chatThreadId, setChatThreadId] = useState("");
   const [restoringSession, setRestoringSession] = useState(false);
   const [restoredSessionTitle, setRestoredSessionTitle] = useState<string | null>(null);
+  const [hasRestoredConversation, setHasRestoredConversation] = useState(false);
   const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
@@ -107,9 +125,8 @@ function EditorWorkspace() {
       return activeRestoredSessionTitle;
     }
 
-    const firstLine = code.split("\n").find((line) => line.trim().length > 0);
-    return firstLine ? firstLine.trim().slice(0, 80) : "Untitled session";
-  }, [activeRestoredSessionTitle, code]);
+    return deriveSessionTitle(code, analysis);
+  }, [activeRestoredSessionTitle, analysis, code]);
 
   const chatContext = useMemo(
     () => ({
@@ -126,6 +143,8 @@ function EditorWorkspace() {
     if (requestedSessionId && accessToken) {
       return;
     }
+
+    setHasRestoredConversation(false);
 
     const timer = window.setTimeout(() => {
       const threadId = getStoredThreadId();
@@ -246,6 +265,9 @@ function EditorWorkspace() {
         const restoredThreadId = detail.chat?.thread_id || getStoredThreadId();
         setStoredThreadId(restoredThreadId);
         setChatThreadId(restoredThreadId);
+        setHasRestoredConversation(
+          Boolean(detail.chat?.messages && detail.chat.messages.length > 0)
+        );
       } catch (error) {
         if (!active) {
           return;
@@ -259,6 +281,7 @@ function EditorWorkspace() {
         const fallbackThreadId = getStoredThreadId();
         setStoredThreadId(fallbackThreadId);
         setChatThreadId(fallbackThreadId);
+        setHasRestoredConversation(false);
       } finally {
         if (active) {
           setRestoringSession(false);
@@ -325,23 +348,7 @@ function EditorWorkspace() {
       const analysisRes = analysisResult.response;
       const analysisRequestError =
         "error" in analysisResult ? analysisResult.error : null;
-      const analysisData = analysisResult.data as
-        | {
-            error?: string;
-            message?: string;
-            pseudocode?: string[];
-            algorithm_steps?: string[];
-            time_complexity?: {
-              best: string;
-              average: string;
-              worst: string;
-            };
-            space_complexity?: string;
-            source?: "cache" | "gemini" | "groq";
-            execution_trace?: unknown[];
-            explanation?: string;
-          }
-        | null;
+      const analysisData = analysisResult.data as AnalysisResponsePayload | null;
 
       if (!analysisRes || analysisRequestError || !analysisData || analysisData.error) {
         setAnalysisError(
@@ -364,6 +371,7 @@ function EditorWorkspace() {
       });
       const nextTraceSteps = normalizeTrace(analysisData.execution_trace || []);
       setTraceSteps(nextTraceSteps);
+      const nextSessionTitle = deriveSessionTitle(code, analysisData);
 
       if (accessToken) {
         appendExecution(
@@ -392,7 +400,7 @@ function EditorWorkspace() {
               algorithmSteps: analysisData.algorithm_steps || [],
             },
           },
-          derivedTitle
+          nextSessionTitle
         );
       }
     } catch {
@@ -682,6 +690,8 @@ function EditorWorkspace() {
           sessionId={sessionId}
           accessToken={accessToken}
           context={chatContext}
+          autoOpen={hasRestoredConversation}
+          restoredConversation={hasRestoredConversation}
         />
       ) : null}
     </div>

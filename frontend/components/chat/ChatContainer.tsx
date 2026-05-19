@@ -21,6 +21,8 @@ type ChatContainerProps = {
   sessionId?: string | null;
   accessToken?: string | null;
   context?: unknown;
+  autoOpen?: boolean;
+  restoredConversation?: boolean;
 };
 
 const createMessageId = () =>
@@ -42,6 +44,8 @@ export default function CopilotWidget({
   sessionId,
   accessToken,
   context,
+  autoOpen = false,
+  restoredConversation = false,
 }: ChatContainerProps) {
   const initialMessages = useMemo(
     () => [
@@ -72,6 +76,12 @@ export default function CopilotWidget({
     sessionId,
     accessToken,
   });
+
+  useEffect(() => {
+    if (autoOpen) {
+      setOpen(true);
+    }
+  }, [autoOpen]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -213,7 +223,13 @@ export default function CopilotWidget({
             <button onClick={() => setOpen(false)}>✕</button>
           </div>
 
-          <div className="relative flex items-center gap-2 px-4 py-2 text-xs text-white/60">
+          <div className="relative flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-white/60">
+            {restoredConversation ? (
+              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-indigo-200">
+                <span className="h-2 w-2 rounded-full bg-indigo-300" />
+                Restored conversation
+              </div>
+            ) : null}
             {status === "saved" && (
               <>
                 <span className="h-2 w-2 rounded-full bg-green-400" />
