@@ -86,6 +86,24 @@ def append_step(line_number, event_type, variables=None, return_value=None):
         "return_value": return_value,
     })
 
+source_lines = USER_CODE.splitlines()
+
+def classify_line(line_number):
+    if line_number is None or line_number <= 0 or line_number > len(source_lines):
+        return "assignment"
+
+    text = source_lines[line_number - 1].strip()
+    if not text:
+        return "assignment"
+
+    if text.startswith(("for ", "while ", "async for ")):
+        return "loop_iteration"
+
+    if text.startswith(("if ", "elif ", "else:", "match ", "case ")):
+        return "branch"
+
+    return "assignment"
+
 def tracer(frame, event, arg):
     if frame.f_code.co_filename != "codevista_user.py":
         return tracer
@@ -101,7 +119,7 @@ def tracer(frame, event, arg):
             if key == "__builtins__":
                 continue
             variables[str(key)] = sanitize(value)
-        append_step(frame.f_lineno, "statement", variables)
+        append_step(frame.f_lineno, classify_line(frame.f_lineno), variables)
         return tracer
 
     if event == "return":
