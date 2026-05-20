@@ -46,6 +46,7 @@ export const MAX_EXECUTIONS_PER_SESSION = 25;
 export const MAX_OUTPUT_LENGTH = 8_000;
 export const MAX_TRACE_ITEMS = 500;
 export const MAX_ALGORITHM_STEPS = 50;
+export const MAX_ALGORITHM_NAME_LENGTH = 120;
 
 const safeTrim = (value: string) => value.trim();
 
@@ -687,6 +688,11 @@ export const validateSessionSaveRequest = (
             );
           }
 
+          validateOptionalExecutionString(
+            typedAi.algorithmName,
+            `executions[${index}].ai.algorithmName`,
+            MAX_ALGORITHM_NAME_LENGTH
+          );
           validateOptionalExecutionString(
             typedAi.explanation,
             `executions[${index}].ai.explanation`,
