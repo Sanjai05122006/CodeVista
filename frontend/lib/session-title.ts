@@ -1,4 +1,5 @@
 type TitleAnalysisLike = {
+  algorithm_name?: string | null;
   pseudocode?: string[] | null;
   algorithm_steps?: string[] | null;
 };
@@ -40,6 +41,15 @@ export const deriveSessionTitle = (
   code: string,
   analysisData?: TitleAnalysisLike | null
 ) => {
+  const algorithmName =
+    typeof analysisData?.algorithm_name === "string"
+      ? analysisData.algorithm_name.trim()
+      : "";
+
+  if (algorithmName) {
+    return algorithmName.slice(0, 80);
+  }
+
   const pseudocodeLines = analysisData?.pseudocode?.filter(
     (line): line is string => typeof line === "string" && line.trim().length > 0
   ) ?? [];

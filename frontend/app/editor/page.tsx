@@ -21,6 +21,7 @@ import { type TraceStep } from "@/lib/trace-visualizer";
 import { deriveSessionTitle } from "@/lib/session-title";
 
 type AnalysisData = {
+  algorithm_name: string;
   pseudocode: string[];
   algorithm_steps: string[];
   time_complexity: {
@@ -45,6 +46,7 @@ type ExecutionData = {
 type AnalysisResponsePayload = {
   error?: string;
   message?: string;
+  algorithm_name?: string;
   pseudocode?: string[];
   algorithm_steps?: string[];
   time_complexity?: {
@@ -189,6 +191,7 @@ function EditorWorkspace() {
         runtime: execution.output.runtime_ms || 0,
         memory: execution.output.memory_kb || 0,
         ai: {
+          algorithmName: execution.analysis?.algorithm_name || undefined,
           pseudocode: execution.analysis?.pseudocode || [],
           explanation: execution.analysis?.explanation || "",
           complexity: {
@@ -231,6 +234,7 @@ function EditorWorkspace() {
           setAnalysis(
             latestExecution.analysis
               ? {
+                  algorithm_name: latestExecution.analysis.algorithm_name || "",
                   pseudocode: latestExecution.analysis.pseudocode,
                   algorithm_steps: latestExecution.analysis.algorithm_steps,
                   time_complexity: {
@@ -359,6 +363,7 @@ function EditorWorkspace() {
       }
 
       setAnalysis({
+        algorithm_name: analysisData.algorithm_name || "",
         pseudocode: analysisData.pseudocode || [],
         algorithm_steps: analysisData.algorithm_steps || [],
         time_complexity: analysisData.time_complexity || {
@@ -386,6 +391,7 @@ function EditorWorkspace() {
             runtime: executionData.runtime_ms || 0,
             memory: executionData.memory_kb || 0,
             ai: {
+              algorithmName: analysisData.algorithm_name || undefined,
               pseudocode: analysisData.pseudocode || [],
               explanation: analysisData.explanation || "",
               complexity: {

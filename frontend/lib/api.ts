@@ -6,6 +6,7 @@ export type BufferedExecution = {
   runtime: number;
   memory: number;
   ai: {
+    algorithmName?: string;
     pseudocode: string[];
     explanation: string;
     complexity: {
@@ -42,6 +43,7 @@ export type SessionExecutionDetail = {
     memory_kb: number;
   };
   analysis: {
+    algorithm_name: string;
     pseudocode: string[];
     algorithm_steps: string[];
     time_complexity: {

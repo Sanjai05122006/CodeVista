@@ -13,6 +13,7 @@ type ExecutionInput = {
   runtime?: number;
   memory?: number;
   ai?: {
+    algorithmName?: string;
     pseudocode?: string[];
     explanation?: string;
     complexity?: {
@@ -61,6 +62,7 @@ type ExecutionResultRecord = {
 
 type AIOutputRecord = {
   execution_id: string;
+  algorithm_name: string | null;
   pseudocode: string | null;
   algorithm_steps: string[] | null;
   time_complexity:
@@ -92,6 +94,30 @@ const validateExecutions = (payload: SaveSessionInput) => {
   }
 
   return payload.executions;
+};
+
+const deriveSessionTitleFromExecution = (execution: ExecutionInput | undefined) => {
+  if (!execution) {
+    return "Untitled session";
+  }
+
+  const algorithmName = execution.ai?.algorithmName?.trim();
+  if (algorithmName) {
+    return algorithmName.slice(0, 120);
+  }
+
+  const firstPseudoLine = execution.ai?.pseudocode?.find((line) =>
+    typeof line === "string" && line.trim().length > 0
+  );
+  if (firstPseudoLine) {
+    return firstPseudoLine.trim().slice(0, 120);
+  }
+
+  const firstCodeLine = execution.code
+    .split("\n")
+    .find((line) => line.trim().length > 0);
+
+  return firstCodeLine ? firstCodeLine.trim().slice(0, 120) : "Untitled session";
 };
 
 const toTitleCase = (value: string) =>
@@ -174,6 +200,9 @@ export const saveSession = async (
 ) => {
   const executions = validateExecutions(payload);
   let sessionId: string = crypto.randomUUID();
+  const fallbackTitle = deriveSessionTitleFromExecution(
+    executions[executions.length - 1]
+  );
 
   if (payload.sessionId) {
     const { data: existingSession, error: existingSessionError } =
@@ -197,7 +226,7 @@ export const saveSession = async (
   const sessionPayload = {
     id: sessionId,
     user_id: userId,
-    title: payload.title ?? null,
+    title: payload.title?.trim() || fallbackTitle,
     updated_at: new Date().toISOString(),
   };
 
@@ -251,8 +280,9 @@ export const saveSession = async (
 
     // AI OUTPUT
     if (input.ai) {
-      await supabaseAdmin.from("ai_outputs").insert({
+      const { error: aiInsertError } = await supabaseAdmin.from("ai_outputs").insert({
         execution_id: execRow.id,
+        algorithm_name: input.ai.algorithmName?.trim() || null,
         pseudocode: input.ai.pseudocode?.join("\n") ?? null,
         algorithm_steps: input.ai.algorithmSteps ?? null,
         time_complexity: input.ai.complexity?.time ?? null,
@@ -260,16 +290,34 @@ export const saveSession = async (
         explanation: input.ai.explanation ?? null,
         execution_trace: input.ai.trace ?? null,
       });
+
+      if (aiInsertError) {
+        throw new AppError(
+          "AI_OUTPUT_INSERT_FAILED",
+          500,
+          `AI_OUTPUT_INSERT_FAILED: ${aiInsertError.message}`
+        );
+      }
     }
 
     // EXECUTION RESULT
-    await supabaseAdmin.from("execution_results").insert({
+    const { error: executionResultError } = await supabaseAdmin
+      .from("execution_results")
+      .insert({
       execution_id: execRow.id,
       stdout: input.output ?? null,
       stderr: input.error ?? null,
       runtime_ms: input.runtime ?? null,
       memory_kb: input.memory ?? null,
     });
+
+    if (executionResultError) {
+      throw new AppError(
+        "EXECUTION_RESULT_INSERT_FAILED",
+        500,
+        `EXECUTION_RESULT_INSERT_FAILED: ${executionResultError.message}`
+      );
+    }
   }
 
   return sessionId;
@@ -478,6 +526,7 @@ export const getSessionDetail = async (
       },
       analysis: ai
         ? {
+            algorithm_name: ai.algorithm_name ?? "",
             pseudocode: ai.pseudocode
               ? ai.pseudocode
                   .split("\n")
