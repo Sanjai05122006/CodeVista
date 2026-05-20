@@ -59,15 +59,15 @@ Return ONLY valid JSON:
 
 {
 pseudocode
+algorithm_name
 algorithm_steps
 time_complexity
 space_complexity
+explanation
 }
 
 Rules:
 
-* DO NOT include algorithm name in output
-* DO NOT include explanation
 * DO NOT include any extra fields
 * DO NOT include markdown
 * DO NOT include text outside JSON
@@ -75,14 +75,14 @@ Rules:
 * Keep algorithm_steps short (4-8 lines max)
 * Use simple numbered steps
 * Pseudocode is required
+* algorithm_name is required
 * algorithm_steps is required
+* explanation is required
 * Always return valid JSON
 
 CRITICAL ANALYSIS RULES:
 
-* Internally identify the algorithm pattern to guide reasoning
-
-* DO NOT include the pattern in final output
+* Identify the algorithm pattern and include a concise algorithm_name
 
 * Derive time complexity step-by-step:
   Example:
@@ -347,6 +347,7 @@ export const extractRetryDelay = (message: string) => {
 
 const fallbackResponse: AnalysisResponse = {
   pseudocode: [],
+  algorithm_name: "Untitled Algorithm",
   algorithm_steps: [],
   time_complexity: {
     best: "N/A",
@@ -354,6 +355,7 @@ const fallbackResponse: AnalysisResponse = {
     worst: "N/A",
   },
   space_complexity: "N/A",
+  explanation: "No explanation available.",
   execution_trace: [],
 };
 
@@ -392,11 +394,13 @@ const ensureExecutionTrace = (
 const isFallbackResult = (result: AnalysisResponse) => {
   return (
     result.pseudocode.length === 0 &&
+    result.algorithm_name === "Untitled Algorithm" &&
     result.algorithm_steps.length === 0 &&
     result.time_complexity.best === "N/A" &&
     result.time_complexity.average === "N/A" &&
     result.time_complexity.worst === "N/A" &&
-    result.space_complexity === "N/A"
+    result.space_complexity === "N/A" &&
+    result.explanation === "No explanation available."
   );
 };
 
