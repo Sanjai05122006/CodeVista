@@ -20,14 +20,14 @@ const classifyEventType = (line: string) => {
     trimmed.startsWith("while(") ||
     trimmed.startsWith("do ")
   ) {
-    return "loop";
+    return "loop_iteration";
   }
 
   if (trimmed.startsWith("return")) {
     return "return";
   }
 
-  return "statement";
+  return "assignment";
 };
 
 const isTraceableLine = (line: string) => {

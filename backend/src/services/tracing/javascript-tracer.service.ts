@@ -1,5 +1,5 @@
 import vm from "vm";
-import { TraceStep } from "../../types/analysis";
+import { TraceEventType, TraceStep } from "../../types/analysis";
 
 const acorn = require("acorn") as typeof import("acorn");
 const walk = require("acorn-walk") as {
@@ -295,9 +295,9 @@ const instrumentJavascript = (code: string) => {
       const line = node.loc?.start?.line ?? null;
       const eventType =
         node.type === "VariableDeclaration"
-          ? "declaration"
+          ? "assignment"
           : node.type === "ExpressionStatement"
-          ? "expression"
+          ? "assignment"
           : node.type === "IfStatement"
           ? "branch"
           : node.type === "ForStatement" ||
@@ -305,8 +305,8 @@ const instrumentJavascript = (code: string) => {
             node.type === "ForOfStatement" ||
             node.type === "ForInStatement" ||
             node.type === "DoWhileStatement"
-          ? "loop"
-          : "statement";
+          ? "loop_iteration"
+          : "assignment";
 
       insertions.push({
         pos: node.start,
@@ -394,7 +394,7 @@ export const traceJavascriptExecution = (code: string): TraceStep[] => {
       },
       snapshot: (
         lineNumber: number | null,
-        eventType: string,
+        eventType: TraceEventType,
         variables: Record<string, unknown>
       ) => {
         if (trace.length >= MAX_TRACE_STEPS) {
