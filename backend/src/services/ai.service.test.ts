@@ -11,6 +11,7 @@ import {
   normalizeAnalysis,
   normalizeSpaceComplexity,
   normalizeTimeComplexity,
+  normalizeTrace,
   safeParse,
 } from "../utils/analysis-normalizer";
 
@@ -46,6 +47,7 @@ const run = async () => {
   );
 
   const normalized = normalizeAnalysis({
+    algorithm_name: "Constant Output",
     pseudocode: [
       "1. SET value = 5",
       "2. OUTPUT value",
@@ -67,10 +69,47 @@ const run = async () => {
     average: "O(1)",
     worst: "O(1)",
   });
+  assert.equal(normalized.algorithm_name, "Constant Output");
+  assert.match(normalized.explanation, /constant value/i);
+
+  assert.deepEqual(
+    normalizeTrace([
+      { step: 1, line_number: 1, event_type: "statement" },
+      { step: 2, line_number: 2, event_type: "loop" },
+      { step: 3, line_number: 3, event_type: "branch" },
+    ]),
+    [
+      {
+        step: 1,
+        line_number: 1,
+        event_type: "assignment",
+        variables: null,
+        call_stack: null,
+        return_value: null,
+      },
+      {
+        step: 2,
+        line_number: 2,
+        event_type: "loop_iteration",
+        variables: null,
+        call_stack: null,
+        return_value: null,
+      },
+      {
+        step: 3,
+        line_number: 3,
+        event_type: "branch",
+        variables: null,
+        call_stack: null,
+        return_value: null,
+      },
+    ]
+  );
 
   const responses = [
-    "{\"pseudocode\":[\"1. SET i = 0\",\"2. RETURN i\"],\"algorithm_steps\":[\"1. Initialize i.\",\"2. Return i.\"],\"time_complexity\":\"O(n)\",\"space_complexity\":\"O(1)\"}",
+    "{\"algorithm_name\":\"Counter Initialization\",\"pseudocode\":[\"1. SET i = 0\",\"2. RETURN i\"],\"algorithm_steps\":[\"1. Initialize i.\",\"2. Return i.\"],\"time_complexity\":\"O(n)\",\"space_complexity\":\"O(1)\",\"explanation\":\"The algorithm initializes a counter and returns it.\"}",
     JSON.stringify({
+      algorithm_name: "Constant Output",
       pseudocode: [
         "1. SET value = 5",
         "2. OUTPUT value",
@@ -114,6 +153,7 @@ const run = async () => {
   assert.equal(providerCalls.length, 1);
   assert.equal(result.source, "gemini");
   assert.equal(cache.size, 1);
+  assert.equal(result.algorithm_name, "Counter Initialization");
   assert.deepEqual(result.algorithm_steps, [
     "1. Initialize i.",
     "2. Return i.",
@@ -128,6 +168,7 @@ const run = async () => {
   });
 
   assert.equal(fallbackResult.time_complexity.best, "N/A");
+  assert.equal(fallbackResult.algorithm_name, "Untitled Algorithm");
   assert.deepEqual(fallbackResult.algorithm_steps, []);
 
   const groqFallbackResult = await analyzeCode("return 1", "javascript", {
@@ -146,6 +187,7 @@ const run = async () => {
         name: "groq",
         provider: async () =>
           JSON.stringify({
+            algorithm_name: "Single Return",
             pseudocode: ["1. RETURN result"],
             algorithm_steps: ["1. Use Groq fallback."],
             time_complexity: "O(1)",
@@ -160,6 +202,7 @@ const run = async () => {
   });
 
   assert.equal(groqFallbackResult.source, "groq");
+  assert.equal(groqFallbackResult.algorithm_name, "Single Return");
 
   const key = getAnalysisCacheKey("console.log(2+3)", "javascript");
   const comparison = getAnalysisCacheKey(

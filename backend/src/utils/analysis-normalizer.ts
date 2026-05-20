@@ -1,15 +1,18 @@
 import { AnalysisResponse, TimeComplexity, TraceStep } from "../types/analysis";
+import { normalizeTraceEventType } from "./trace-normalizer";
 
 type CoreAnalysis = Pick<
   AnalysisResponse,
   | "pseudocode"
+  | "algorithm_name"
   | "algorithm_steps"
   | "time_complexity"
   | "space_complexity"
+  | "explanation"
   | "execution_trace"
 >;
 
-const normalizeTrace = (value: unknown): TraceStep[] => {
+export const normalizeTrace = (value: unknown): TraceStep[] => {
   if (!Array.isArray(value)) {
     return [];
   }
@@ -25,7 +28,7 @@ const normalizeTrace = (value: unknown): TraceStep[] => {
         typeof item.line_number === "number" && Number.isFinite(item.line_number)
           ? item.line_number
           : null,
-      event_type: typeof item.event_type === "string" ? item.event_type : null,
+      event_type: normalizeTraceEventType(item.event_type),
       variables:
         item.variables && typeof item.variables === "object" && !Array.isArray(item.variables)
           ? (item.variables as Record<string, unknown>)
@@ -93,6 +96,16 @@ const normalizePseudocode = (value: unknown): string[] => {
   return [];
 };
 
+const normalizeAlgorithmName = (raw: any): string => {
+  const candidate = raw?.algorithm_name ?? raw?.algorithmName ?? raw?.title;
+
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    return candidate.trim().slice(0, 120);
+  }
+
+  return "Untitled Algorithm";
+};
+
 const normalizeAlgorithmSteps = (raw: any): string[] => {
   const candidate =
     raw?.algorithm_steps ?? raw?.pseudo_algorithm ?? raw?.algorithm;
@@ -111,12 +124,29 @@ const normalizeAlgorithmSteps = (raw: any): string[] => {
   return [];
 };
 
+const normalizeExplanation = (raw: any): string => {
+  const candidate = raw?.explanation;
+
+  if (typeof candidate === "string" && candidate.trim().length > 0) {
+    return candidate.trim();
+  }
+
+  const firstStep = normalizeAlgorithmSteps(raw)[0];
+  if (firstStep) {
+    return firstStep;
+  }
+
+  return "No explanation available.";
+};
+
 export const normalizeAnalysis = (raw: any): CoreAnalysis => {
   return {
     pseudocode: normalizePseudocode(raw?.pseudocode),
+    algorithm_name: normalizeAlgorithmName(raw),
     algorithm_steps: normalizeAlgorithmSteps(raw),
     time_complexity: normalizeTimeComplexity(raw?.time_complexity),
     space_complexity: normalizeSpaceComplexity(raw?.space_complexity),
+    explanation: normalizeExplanation(raw),
     execution_trace: normalizeTrace(raw?.execution_trace),
   };
 };
