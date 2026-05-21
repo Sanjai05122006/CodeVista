@@ -11,6 +11,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "./supabaseClient";
 import { clearStoredChatState } from "@/hooks/useLocalChat";
+import { getSessionSafely } from "./auth-session";
 
 type AuthContextValue = {
   session: Session | null;
@@ -28,9 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const refreshSession = useCallback(async () => {
-    const {
-      data: { session: nextSession },
-    } = await supabase.auth.getSession();
+    const { session: nextSession } = await getSessionSafely();
 
     setSession(nextSession);
     setLoading(false);
@@ -41,12 +40,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let mounted = true;
 
-    void supabase.auth.getSession().then(async ({ data }) => {
+    void getSessionSafely().then(({ session: nextSession }) => {
       if (!mounted) {
         return;
       }
 
-      setSession(data.session);
+      setSession(nextSession);
       setLoading(false);
     });
 
