@@ -4,61 +4,61 @@ import { PublicPageFrame } from "@/components/layout/public-page-frame";
 
 const valuePoints = [
   {
-    title: "What we do",
+    title: "Learn in one place",
     description:
-      "CodeVista helps users write code, run it, inspect execution, and understand the algorithm in one place.",
+      "Write code, run it, inspect execution, and understand the logic without jumping between multiple tools.",
     icon: BookOpen,
   },
   {
-    title: "Why CodeVista",
+    title: "See what your code is doing",
     description:
-      "The product is built to reduce context switching between editor, output, explanation, and saved learning history.",
+      "Execution flow, analysis, and saved context stay connected so the code feels easier to follow and explain.",
     icon: Sparkles,
   },
   {
-    title: "How it helps",
+    title: "Pick up where you left off",
     description:
-      "Users can revisit saved sessions, inspect trace steps, review complexity, and continue from previous work.",
+      "Saved sessions help you come back to earlier work, review what happened, and continue learning without starting over.",
     icon: GitBranch,
   },
   {
-    title: "Support",
+    title: "Feel more confident",
     description:
-      "The website includes clear support and contact routes so issues around sessions, replay, or analysis can be reported properly.",
+      "The product is built to make difficult code feel less intimidating by turning runtime behavior into something clearer and more manageable.",
     icon: LifeBuoy,
   },
 ];
 
 export default function AboutPage() {
   return (
-    <PublicPageFrame>
-      <main className="px-6 py-6 pb-12 text-[#111827]">
+    <PublicPageFrame headerVariant="landing">
+      <main className="px-6 py-10 pb-16 text-[var(--ink)] lg:px-10">
         <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <section className="overflow-hidden rounded-[36px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_30%),linear-gradient(180deg,#ffffff_0%,#eef2ff_52%,#eff6ff_100%)] shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-          <div className="px-8 py-10 lg:px-12 lg:py-14">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#4f46e5]">
+        <section className="cv-shadow-lg overflow-hidden rounded-2xl border border-[var(--hairline)] bg-white">
+          <div className="mx-auto max-w-4xl px-8 py-12 text-center lg:px-12 lg:py-16">
+            <p className="font-mono-ui text-[12px] text-[var(--mute)]">
               About CodeVista
             </p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-[#111827] sm:text-5xl">
+            <h1 className="font-display mt-4 text-4xl font-semibold tracking-[-1.28px] text-[var(--ink)] sm:text-5xl">
               A clean workspace for understanding code better.
             </h1>
-            <p className="mt-6 max-w-3xl text-base leading-8 text-gray-600">
-              CodeVista is built for learners and developers who want more than
-              code execution. It connects writing, running, visualizing, and
-              reviewing code in a single product flow.
+            <p className="mt-6 text-base leading-8 text-[var(--body)]">
+              CodeVista is built for people who want to understand code with
+              less friction. It brings writing, running, visualizing, and
+              reviewing code into one calmer learning flow.
             </p>
 
-            <div className="mt-8 flex flex-wrap gap-3">
+            <div className="mt-8 flex flex-wrap justify-center gap-3">
               <Link
                 href="/editor"
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#6366f1] via-[#7c3aed] to-[#4f46e5] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_40px_rgba(99,102,241,0.28)] transition hover:translate-y-[-1px]"
+                className="inline-flex h-12 items-center gap-2 rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
               >
                 Open Editor
                 <ArrowRight size={16} />
               </Link>
               <Link
                 href="/contact"
-                className="inline-flex items-center gap-2 rounded-2xl border border-[#c7d2fe] bg-white px-5 py-3 text-sm font-medium text-[#4338ca] transition hover:bg-[#f8faff]"
+                className="inline-flex h-12 items-center gap-2 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)]"
               >
                 Contact Us
               </Link>
@@ -73,15 +73,15 @@ export default function AboutPage() {
             return (
               <article
                 key={item.title}
-                className="rounded-[30px] border border-[#e5e7eb] bg-white p-7 shadow-[0_18px_55px_rgba(15,23,42,0.06)]"
+                className="cv-shadow-md rounded-xl border border-[var(--hairline)] bg-white p-7"
               >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#eef2ff] to-[#eff6ff] text-[#4f46e5]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] text-[var(--ink)]">
                   <Icon size={20} />
                 </div>
-                <h2 className="mt-5 text-2xl font-semibold tracking-tight text-[#111827]">
+                <h2 className="font-display mt-5 text-2xl font-semibold tracking-[-0.96px] text-[var(--ink)]">
                   {item.title}
                 </h2>
-                <p className="mt-3 text-sm leading-7 text-gray-600">
+                <p className="mt-3 text-sm leading-7 text-[var(--body)]">
                   {item.description}
                 </p>
               </article>
