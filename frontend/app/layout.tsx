@@ -13,8 +13,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="h-full antialiased">
-      <body className="h-full">
+    <html lang="en" className="h-full antialiased" suppressHydrationWarning>
+      <body className="h-full" suppressHydrationWarning>
         <AuthProvider>
           <div className="min-h-full">{children}</div>
         </AuthProvider>
