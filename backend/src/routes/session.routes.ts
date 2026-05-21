@@ -5,13 +5,21 @@ import {
   getSessionHistoryHandler,
   saveSessionHandler,
 } from "../controllers/session.controller";
-import { validateSessionSaveRequest } from "../middleware/rateLimit.middleware";
+import {
+  expensiveEndpointRateLimits,
+  validateSessionSaveRequest,
+} from "../middleware/rateLimit.middleware";
 
 const router = Router();
 
 router.use(authMiddleware);
-router.post("/save", validateSessionSaveRequest, saveSessionHandler);
-router.get("/history", getSessionHistoryHandler);
-router.get("/:id", getSessionDetailHandler);
+router.post(
+  "/save",
+  expensiveEndpointRateLimits.sessionSave,
+  validateSessionSaveRequest,
+  saveSessionHandler
+);
+router.get("/history", expensiveEndpointRateLimits.sessionRead, getSessionHistoryHandler);
+router.get("/:id", expensiveEndpointRateLimits.sessionRead, getSessionDetailHandler);
 
 export default router;

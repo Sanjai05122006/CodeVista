@@ -7,6 +7,7 @@ import {
   MAX_CHAT_MESSAGE_LENGTH,
   MAX_CODE_LENGTH,
   MAX_JSON_BODY_SIZE,
+  validatePasswordResetRequest,
   validateChatBatchRequest,
   validateChatRequest,
   validateExecutionRequest,
@@ -63,6 +64,20 @@ const createTestApp = () => {
   app.post("/session/save", validateSessionSaveRequest, (_req, res) => {
     res.status(200).json({ ok: true });
   });
+
+  app.post(
+    "/auth/password/reset/request",
+    createRateLimitMiddleware({
+      name: "test-password-reset-request",
+      anonymousLimit: 2,
+      authenticatedLimit: 3,
+      windowMs: 15 * 60_000,
+    }),
+    validatePasswordResetRequest,
+    (_req, res) => {
+      res.status(200).json({ ok: true });
+    }
+  );
 
   app.use(errorHandler);
   return app;
@@ -178,6 +193,31 @@ const run = async () => {
     });
     assert.equal(missingThreadReference.status, 400);
     assert.equal(missingThreadReference.data?.error, "INVALID_REQUEST_BODY");
+
+    const invalidResetEmail = await request(
+      baseUrl,
+      "/auth/password/reset/request",
+      {
+        email: "not-an-email",
+      }
+    );
+    assert.equal(invalidResetEmail.status, 400);
+    assert.equal(invalidResetEmail.data?.error, "INVALID_REQUEST_BODY");
+
+    __testing__.resetRateLimitBuckets();
+
+    const resetOne = await request(baseUrl, "/auth/password/reset/request", {
+      email: "user@example.com",
+    });
+    const resetTwo = await request(baseUrl, "/auth/password/reset/request", {
+      email: "user@example.com",
+    });
+    const resetThree = await request(baseUrl, "/auth/password/reset/request", {
+      email: "user@example.com",
+    });
+    assert.equal(resetOne.status, 200);
+    assert.equal(resetTwo.status, 200);
+    assert.equal(resetThree.status, 429);
 
     const oversizedBodyResponse = await fetch(`${baseUrl}/chat`, {
       method: "POST",

@@ -2,14 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Mail,
-  Lock,
-  User,
+  Activity,
   Code2,
   GitBranch,
-  Activity,
+  Lock,
+  Mail,
+  User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth-context";
@@ -116,111 +117,110 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="h-screen flex overflow-hidden bg-[#f8fafc]">
-      {/* LEFT */}
-      <div className="w-1/2 px-16 py-12 flex flex-col 
-      bg-[radial-gradient(circle_at_70%_50%,rgba(99,102,241,0.15),transparent_40%),linear-gradient(135deg,#f8fafc,#eef2ff,#e0e7ff)]">
-
-        {/* LOGO */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl 
-          bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-          flex items-center justify-center text-white shadow-md">
+    <main className="flex min-h-screen flex-col bg-[var(--canvas-soft)] lg:flex-row">
+      <section className="cv-mesh-gradient hidden lg:flex lg:w-1/2 lg:flex-col lg:px-16 lg:py-12">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
             <Code2 size={18} />
           </div>
-          <span className="text-lg font-semibold text-gray-700">
-            CodeVista
-          </span>
-        </div>
-
-        {/* CENTER */}
-        <div className="flex-1 flex items-center">
-          <div className="w-full">
-
-            {/* TAG */}
-            <span className="text-sm px-4 py-1 
-            bg-[#eef2ff] text-[#4f46e5] rounded-full">
-              Understand. Visualize. Master.
-            </span>
-
-            {/* HEADING */}
-            <h1 className="mt-8 text-[52px] leading-[1.1] font-bold tracking-tight">
-              <span className="text-[#111827]">Understand code,</span>
-              <br />
-              <span className="bg-gradient-to-r 
-              from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-              bg-clip-text text-transparent">
-                not just run it.
-              </span>
-            </h1>
-
-            {/* DESC */}
-            <p className="mt-6 text-gray-500 max-w-sm leading-relaxed">
-              CodeVista helps you visualize execution, analyze complexity,
-              and truly understand algorithms — all in one place.
+          <div>
+            <p className="font-display text-lg font-semibold tracking-[-0.54px] text-[var(--ink)]">
+              CodeVista
             </p>
-
-            {/* FEATURES */}
-            <div className="grid gap-6 mt-10">
-              <Feature
-                icon={<Code2 size={18} />}
-                title="Write & Run"
-                desc="Code in our smart editor"
-              />
-              <Feature
-                icon={<GitBranch size={18} />}
-                title="Visualize"
-                desc="Execution flow step by step"
-              />
-              <Feature
-                icon={<Activity size={18} />}
-                title="Analyze"
-                desc="Time & space complexity"
-              />
-            </div>
+            <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+              developer intelligence
+            </p>
           </div>
-        </div>
-      </div>
+        </Link>
 
-      {/* RIGHT */}
-      <div className="w-1/2 bg-white px-16 py-12 flex items-center">
-        <div className="w-full max-w-md mx-auto">
-
-          <h2 className="text-3xl font-semibold text-[#111827]">
-            Create your account
-          </h2>
-          <p className="text-gray-500 mt-2">
-            Start your journey with CodeVista
+        <div className="max-w-xl pt-16">
+          <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+            Create an account
+          </p>
+          <h1 className="font-display mt-5 text-[48px] font-semibold tracking-[-2.4px] text-[var(--ink)]">
+            Start understanding code with more clarity.
+          </h1>
+          <p className="mt-6 max-w-md text-[18px] leading-8 text-[var(--body)]">
+            Build your workspace, save progress across sessions, and keep
+            execution, analysis, and learning history together.
           </p>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mt-8 space-y-4">
-              <Input
+          <div className="mt-10 grid gap-6">
+            <Feature
+              icon={<Code2 size={18} />}
+              title="Write and run"
+              desc="Use one workspace for code, output, and explanation."
+            />
+            <Feature
+              icon={<GitBranch size={18} />}
+              title="Follow the logic"
+              desc="Replay execution and revisit earlier learning sessions."
+            />
+            <Feature
+              icon={<Activity size={18} />}
+              title="Learn with context"
+              desc="Keep analysis, history, and questions tied to the same work."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="flex w-full items-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-16 lg:py-12">
+        <div className="mx-auto w-full max-w-md">
+          <Link href="/" className="mb-10 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
+              <Code2 size={18} />
+            </div>
+            <div>
+              <p className="font-display text-base font-semibold tracking-[-0.48px] text-[var(--ink)]">
+                CodeVista
+              </p>
+              <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+                developer intelligence
+              </p>
+            </div>
+          </Link>
+
+          <p className="font-mono-ui text-[12px] text-[var(--mute)]">Register</p>
+          <h2 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+            Create your workspace.
+          </h2>
+          <p className="mt-3 text-[16px] leading-7 text-[var(--body)]">
+            Set up your account to save sessions and continue learning over time.
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8">
+            <div className="grid gap-4">
+              <InputField
+                label="Full name"
                 icon={<User size={18} />}
-                placeholder="Full name"
+                placeholder="Enter your name"
                 value={fullName}
                 onChange={(event) => setFullName(event.target.value)}
                 autoComplete="name"
               />
-              <Input
+              <InputField
+                label="Email address"
                 icon={<Mail size={18} />}
-                placeholder="Email address"
+                placeholder="Enter your email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
               />
-              <Input
+              <InputField
+                label="Password"
                 icon={<Lock size={18} />}
-                placeholder="Password"
+                placeholder="Create a password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
                 autoComplete="new-password"
               />
-              <Input
+              <InputField
+                label="Confirm password"
                 icon={<Lock size={18} />}
-                placeholder="Confirm password"
+                placeholder="Confirm your password"
                 type="password"
                 value={confirmPassword}
                 onChange={(event) => setConfirmPassword(event.target.value)}
@@ -228,90 +228,74 @@ export default function RegisterPage() {
               />
             </div>
 
-            {/* RULES */}
-            <div className="grid grid-cols-2 gap-y-3 mt-6 text-sm text-gray-500">
+            <div className="mt-6 grid gap-3 text-sm text-[var(--body)] sm:grid-cols-2">
               {passwordRequirements.map((requirement) => {
                 const matched = requirement.test(password);
 
                 return (
                   <span
                     key={requirement.label}
-                    className={matched ? "text-[#6366f1]" : "text-gray-400"}
+                    className={matched ? "text-[var(--ink)]" : "text-[var(--mute)]"}
                   >
-                    {matched ? "✔" : "•"} {requirement.label}
+                    {matched ? "•" : "○"} {requirement.label}
                   </span>
                 );
               })}
             </div>
 
-            {/* CHECK */}
-            <label className="flex gap-2 mt-6 text-sm text-gray-500 cursor-pointer">
+            <label className="mt-6 flex gap-3 text-sm text-[var(--body)]">
               <input
                 type="checkbox"
                 checked={agreedToTerms}
                 onChange={(event) => setAgreedToTerms(event.target.checked)}
-                className="accent-[#6366f1] w-4 h-4 mt-[2px]"
+                className="mt-1 h-4 w-4 accent-[#171717]"
               />
               <span>
-                I agree to the{" "}
-                <span className="text-[#6366f1] hover:underline">
-                  Terms of Service
-                </span>{" "}
-                and{" "}
-                <span className="text-[#6366f1] hover:underline">
-                  Privacy Policy
-                </span>
+                I agree to the Terms of Service and Privacy Policy.
               </span>
             </label>
 
-            {/* BUTTON */}
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 w-full py-3 rounded-xl text-white font-medium
-              bg-gradient-to-r from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-              shadow-[0_15px_40px_rgba(99,102,241,0.35)]
-              hover:shadow-[0_20px_50px_rgba(99,102,241,0.45)]
-              transition-all disabled:opacity-70"
+              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
             >
               Create account
             </button>
           </form>
 
-          {/* DIVIDER */}
-          <div className="flex items-center gap-4 my-6 text-gray-400 text-sm">
-            <div className="flex-1 h-px bg-gray-200" />
+          <div className="my-6 flex items-center gap-4 text-sm text-[var(--mute)]">
+            <div className="h-px flex-1 bg-[var(--hairline)]" />
             or continue with
-            <div className="flex-1 h-px bg-gray-200" />
+            <div className="h-px flex-1 bg-[var(--hairline)]" />
           </div>
 
-          {/* GOOGLE */}
           <button
             type="button"
             onClick={handleGoogleSignup}
             disabled={submitting}
-            className="w-full border border-gray-200 rounded-xl py-3 flex items-center justify-center gap-2 text-gray-700 hover:bg-gray-50 transition disabled:opacity-70"
+            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
           >
-            <Image src="/google.svg" alt="" width={20} height={20} />
+            <Image src="/google.svg" alt="" width={18} height={18} />
             Continue with Google
           </button>
 
-          <p className="text-sm text-gray-500 mt-6 text-center">
+          <p className="mt-6 text-center text-sm text-[var(--body)]">
             Already have an account?{" "}
-            <span
+            <button
+              type="button"
               onClick={() => router.push("/login")}
-              className="text-[#6366f1] cursor-pointer hover:underline"
+              className="text-[var(--ink)] underline underline-offset-4"
             >
               Sign in
-            </span>
+            </button>
           </p>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
 
-/* FEATURE */
 function Feature({
   icon,
   title,
@@ -322,22 +306,22 @@ function Feature({
   desc: string;
 }) {
   return (
-    <div className="flex gap-4 items-start">
-      <div className="w-11 h-11 rounded-lg 
-      bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-      text-white flex items-center justify-center shadow-md">
+    <div className="flex items-start gap-4">
+      <div className="flex h-11 w-11 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
         {icon}
       </div>
       <div>
-        <p className="font-semibold text-gray-800">{title}</p>
-        <p className="text-sm text-gray-500 mt-1">{desc}</p>
+        <p className="font-display text-[20px] font-semibold tracking-[-0.6px] text-[var(--ink)]">
+          {title}
+        </p>
+        <p className="mt-1 text-sm leading-6 text-[var(--body)]">{desc}</p>
       </div>
     </div>
   );
 }
 
-/* INPUT */
-function Input({
+function InputField({
+  label,
   icon,
   placeholder,
   type = "text",
@@ -345,6 +329,7 @@ function Input({
   onChange,
   autoComplete,
 }: {
+  label: string;
   icon: React.ReactNode;
   placeholder: string;
   type?: string;
@@ -353,22 +338,19 @@ function Input({
   autoComplete?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 
-    bg-[#f9fafb] border border-gray-200 rounded-xl
-    focus-within:border-[#6366f1] 
-    focus-within:ring-2 focus-within:ring-[#6366f1]/20 transition">
-
-      <div className="text-gray-400">{icon}</div>
-
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        autoComplete={autoComplete}
-        className="w-full bg-transparent text-gray-800 
-        placeholder:text-gray-400 outline-none text-sm"
-      />
-    </div>
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-[var(--ink)]">{label}</span>
+      <div className="flex items-center gap-3 rounded-md border border-[var(--hairline)] bg-white px-4 py-3 transition focus-within:border-[var(--ink)]">
+        <div className="text-[var(--mute)]">{icon}</div>
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          autoComplete={autoComplete}
+          className="w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-[var(--mute)]"
+        />
+      </div>
+    </label>
   );
 }

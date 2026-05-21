@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Mail, Lock, Code2 } from "lucide-react";
+import { Code2, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth-context";
 
@@ -63,89 +64,75 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col lg:flex-row bg-[#f8fafc]">
-
-      {/* LEFT SIDE */}
-      <div className="hidden lg:flex lg:w-1/2 relative px-8 xl:px-16 py-10 xl:py-12 flex-col
-      bg-gradient-to-br from-[#f8fafc] via-[#eef2ff] to-[#e0e7ff]">
-
-        {/* LOGO */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl 
-          bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-          flex items-center justify-center text-white shadow-md">
+    <main className="flex min-h-screen flex-col bg-[var(--canvas-soft)] lg:flex-row">
+      <section className="cv-mesh-gradient hidden lg:flex lg:w-1/2 lg:flex-col lg:px-16 lg:py-12">
+        <Link href="/" className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
             <Code2 size={18} />
           </div>
-          <span className="text-lg font-semibold text-gray-700">
-            CodeVista
-          </span>
-        </div>
-
-        {/* CONTENT */}
-        <div className="flex-1 flex items-center">
           <div>
-
-            <span className="text-sm px-4 py-1 
-            bg-[#eef2ff] text-[#4f46e5] rounded-full">
-              Welcome back!
-            </span>
-
-            <h1 className="mt-6 xl:mt-8 text-3xl sm:text-4xl xl:text-[52px] 
-            leading-tight font-bold tracking-tight">
-              <span className="text-[#111827]">Continue your</span>
-              <br />
-              <span className="bg-gradient-to-r 
-              from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-              bg-clip-text text-transparent">
-                learning
-              </span>{" "}
-              <span className="text-[#111827]">journey.</span>
-            </h1>
-
-            <p className="mt-4 xl:mt-6 text-gray-500 max-w-md text-sm sm:text-base">
-              Access your saved sessions, visualizations,
-              and insights — all in one place.
+            <p className="font-display text-lg font-semibold tracking-[-0.54px] text-[var(--ink)]">
+              CodeVista
+            </p>
+            <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+              developer intelligence
             </p>
           </div>
+        </Link>
+
+        <div className="max-w-xl pt-16">
+          <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+            Welcome back
+          </p>
+          <h1 className="font-display mt-5 text-[48px] font-semibold tracking-[-2.4px] text-[var(--ink)]">
+            Continue learning with less friction.
+          </h1>
+          <p className="mt-6 max-w-md text-[18px] leading-8 text-[var(--body)]">
+            Reopen your workspace, revisit saved sessions, and keep your code,
+            analysis, and progress in one place.
+          </p>
         </div>
-      </div>
+      </section>
 
-      {/* RIGHT SIDE */}
-      <div className="w-full lg:w-1/2 bg-[#f9fafb] px-6 sm:px-10 md:px-16 py-10 flex items-center">
-        <div className="w-full max-w-md mx-auto">
-
-          {/* MOBILE LOGO */}
-          <div className="flex lg:hidden items-center gap-3 mb-8">
-            <div className="w-9 h-9 rounded-xl 
-            bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-            flex items-center justify-center text-white">
-              <Code2 size={16} />
+      <section className="flex w-full items-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-16 lg:py-12">
+        <div className="mx-auto w-full max-w-md">
+          <Link href="/" className="mb-10 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
+              <Code2 size={18} />
             </div>
-            <span className="text-base font-semibold text-gray-700">
-              CodeVista
-            </span>
-          </div>
+            <div>
+              <p className="font-display text-base font-semibold tracking-[-0.48px] text-[var(--ink)]">
+                CodeVista
+              </p>
+              <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+                developer intelligence
+              </p>
+            </div>
+          </Link>
 
-          <h2 className="text-2xl sm:text-3xl font-semibold text-[#111827]">
-            Sign in to CodeVista
+          <p className="font-mono-ui text-[12px] text-[var(--mute)]">Sign in</p>
+          <h2 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+            Access your workspace.
           </h2>
-          <p className="text-gray-500 mt-2 text-sm sm:text-base">
-            Enter your credentials to access your account
+          <p className="mt-3 text-[16px] leading-7 text-[var(--body)]">
+            Enter your details to continue where you left off.
           </p>
 
-          <form onSubmit={handleSubmit}>
-            <div className="mt-6 sm:mt-8 space-y-4">
-              <Input
+          <form onSubmit={handleSubmit} className="mt-8">
+            <div className="grid gap-4">
+              <InputField
+                label="Email address"
                 icon={<Mail size={18} />}
-                placeholder="Email address"
+                placeholder="Enter your email"
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
               />
-              <Input
+              <InputField
+                label="Password"
                 icon={<Lock size={18} />}
-                placeholder="Password"
+                placeholder="Enter your password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
@@ -153,66 +140,63 @@ export default function LoginPage() {
               />
             </div>
 
-            <div className="flex justify-between items-center mt-5 text-sm">
-              <label className="flex items-center gap-2 text-gray-500">
-                <input type="checkbox" className="accent-[#6366f1]" />
+            <div className="mt-5 flex items-center justify-between gap-4 text-sm">
+              <label className="flex items-center gap-2 text-[var(--body)]">
+                <input type="checkbox" className="h-4 w-4 accent-[#171717]" />
                 Remember me
               </label>
 
-              <span className="text-[#6366f1] cursor-pointer hover:underline">
+              <Link
+                href="/forgot-password"
+                className="text-[var(--body)] underline underline-offset-4"
+              >
                 Forgot password?
-              </span>
+              </Link>
             </div>
 
-            {/* BUTTON */}
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 w-full py-3 rounded-xl text-white font-medium
-              bg-gradient-to-r from-[#6366f1] via-[#7c3aed] to-[#4f46e5]
-              shadow-md hover:opacity-95 transition disabled:opacity-70"
+              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
             >
               Sign in
             </button>
           </form>
 
-          {/* DIVIDER */}
-          <div className="flex items-center gap-4 my-6 text-gray-400 text-sm">
-            <div className="flex-1 h-px bg-gray-200" />
+          <div className="my-6 flex items-center gap-4 text-sm text-[var(--mute)]">
+            <div className="h-px flex-1 bg-[var(--hairline)]" />
             or continue with
-            <div className="flex-1 h-px bg-gray-200" />
+            <div className="h-px flex-1 bg-[var(--hairline)]" />
           </div>
 
-          {/* GOOGLE */}
           <button
             type="button"
             onClick={handleGoogleLogin}
             disabled={submitting}
-            className="w-full border border-gray-200 rounded-xl py-3 
-          flex items-center justify-center gap-2 text-gray-700 
-          hover:bg-gray-50 transition disabled:opacity-70"
+            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
           >
-            <Image src="/google.svg" alt="" width={20} height={20} />
+            <Image src="/google.svg" alt="" width={18} height={18} />
             Continue with Google
           </button>
 
-          <p className="text-sm text-gray-500 mt-6 text-center">
-            Don’t have an account?{" "}
-            <span
+          <p className="mt-6 text-center text-sm text-[var(--body)]">
+            Don&apos;t have an account?{" "}
+            <button
+              type="button"
               onClick={() => router.push("/register")}
-              className="text-[#6366f1] cursor-pointer hover:underline"
+              className="text-[var(--ink)] underline underline-offset-4"
             >
               Create account
-            </span>
+            </button>
           </p>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
 
-/* INPUT */
-function Input({
+function InputField({
+  label,
   icon,
   placeholder,
   type = "text",
@@ -220,6 +204,7 @@ function Input({
   onChange,
   autoComplete,
 }: {
+  label: string;
   icon: React.ReactNode;
   placeholder: string;
   type?: string;
@@ -228,22 +213,19 @@ function Input({
   autoComplete?: string;
 }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-3 
-    bg-white border border-gray-200 rounded-xl
-    focus-within:border-[#6366f1] 
-    focus-within:ring-2 focus-within:ring-[#6366f1]/20 transition">
-
-      <div className="text-gray-400">{icon}</div>
-
-      <input
-        type={type}
-        placeholder={placeholder}
-        value={value}
-        onChange={onChange}
-        autoComplete={autoComplete}
-        className="w-full bg-transparent text-gray-800 
-        placeholder:text-gray-400 outline-none text-sm"
-      />
-    </div>
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-[var(--ink)]">{label}</span>
+      <div className="flex items-center gap-3 rounded-md border border-[var(--hairline)] bg-white px-4 py-3 transition focus-within:border-[var(--ink)]">
+        <div className="text-[var(--mute)]">{icon}</div>
+        <input
+          type={type}
+          placeholder={placeholder}
+          value={value}
+          onChange={onChange}
+          autoComplete={autoComplete}
+          className="w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-[var(--mute)]"
+        />
+      </div>
+    </label>
   );
 }

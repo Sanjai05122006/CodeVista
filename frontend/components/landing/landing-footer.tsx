@@ -1,20 +1,105 @@
+import Link from "next/link";
 import { Code2 } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
 
-export function LandingFooter() {
+type LandingFooterProps = {
+  variant?: "legacy" | "landing";
+};
+
+const footerLinks = [
+  {
+    title: "Product",
+    items: [
+      { href: "/editor", label: "Editor" },
+      { href: "/history", label: "History" },
+      { href: "/about", label: "About" },
+    ],
+  },
+  {
+    title: "Access",
+    items: [
+      { href: "/login", label: "Log in" },
+      { href: "/register", label: "Sign up" },
+      { href: "/settings", label: "Settings" },
+    ],
+  },
+  {
+    title: "Support",
+    items: [
+      { href: "/contact", label: "Contact" },
+      { href: process.env.NEXT_PUBLIC_GITHUB_URL?.trim() || "https://github.com", label: "Repository" },
+      { href: "mailto:" + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@example.com"), label: "Support email" },
+    ],
+  },
+];
+
+export function LandingFooter({
+  variant = "legacy",
+}: LandingFooterProps) {
+  if (variant === "landing") {
+    return (
+      <footer className="mt-auto border-t border-[var(--hairline)] bg-white">
+        <div className="mx-auto grid w-full max-w-7xl gap-10 px-6 py-12 lg:grid-cols-[1.1fr_1.9fr] lg:px-10">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
+                <Code2 size={16} />
+              </div>
+              <div>
+                <p className="font-display text-[18px] font-semibold tracking-[-0.54px] text-[var(--ink)]">
+                  CodeVista
+                </p>
+                <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+                  code understanding workspace
+                </p>
+              </div>
+            </div>
+
+            <p className="mt-5 max-w-sm text-sm leading-6 text-[var(--body)]">
+              Execution, analysis, visualization, and session memory arranged
+              as one product surface.
+            </p>
+            <p className="mt-5 text-sm text-[var(--mute)]">
+              Copyright {currentYear} CodeVista
+            </p>
+          </div>
+
+          <div className="grid gap-8 sm:grid-cols-3">
+            {footerLinks.map((group) => (
+              <div key={group.title}>
+                <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+                  {group.title}
+                </p>
+                <div className="mt-4 grid gap-3">
+                  {group.items.map((item) => (
+                    <FooterLink
+                      key={item.label}
+                      href={item.href}
+                      label={item.label}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </footer>
+    );
+  }
+
   return (
-    <footer className="border-t border-white/60 bg-[linear-gradient(180deg,#eef2ff_0%,#f8fafc_55%,#ffffff_100%)]">
+    <footer className="mt-auto border-t border-[var(--hairline)] bg-[var(--canvas)]">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-6 py-8 lg:flex-row lg:items-center lg:justify-between lg:px-10">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5] text-white shadow-[0_12px_30px_rgba(99,102,241,0.28)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[var(--ink)] text-[var(--on-primary)] cv-shadow-sm">
             <Code2 size={18} />
           </div>
           <div>
-            <p className="text-lg font-semibold tracking-tight text-gray-700">
+            <p className="text-lg font-semibold tracking-tight text-[var(--ink)]">
               CodeVista
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-[var(--body)]">
               Copyright {currentYear} CodeVista
             </p>
           </div>
@@ -42,6 +127,32 @@ export function LandingFooter() {
   );
 }
 
+function FooterLink({ href, label }: { href: string; label: string }) {
+  const isExternal = href.startsWith("http") || href.startsWith("mailto:");
+
+  if (isExternal) {
+    return (
+      <a
+        href={href}
+        target={href.startsWith("http") ? "_blank" : undefined}
+        rel={href.startsWith("http") ? "noreferrer" : undefined}
+        className="text-sm text-[var(--body)] transition hover:text-[var(--ink)]"
+      >
+        {label}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="text-sm text-[var(--body)] transition hover:text-[var(--ink)]"
+    >
+      {label}
+    </Link>
+  );
+}
+
 function SocialLink({
   href,
   label,
@@ -57,7 +168,7 @@ function SocialLink({
       target="_blank"
       rel="noreferrer"
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[#e5e7eb] bg-white text-gray-600 transition hover:border-[#c7d2fe] hover:text-[#4f46e5]"
+      className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--canvas)] text-[var(--body)] transition hover:bg-[var(--canvas-soft)] hover:text-[var(--ink)]"
     >
       {icon}
     </a>

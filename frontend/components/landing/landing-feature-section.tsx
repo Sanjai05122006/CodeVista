@@ -1,62 +1,113 @@
-import { Activity, BookOpen, GitBranch, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
-const featureList = [
+const capabilityCards = [
   {
-    icon: <BookOpen size={20} />,
-    title: "Learning-first experience",
+    eyebrow: "Execution",
+    title: "Ground the interface in runtime facts.",
     description:
-      "The interface is shaped around understanding concepts, not just compiling code and moving on.",
+      "Judge0 or fallback execution results sit at the center of the workflow so the product can explain real behavior instead of inventing it.",
   },
   {
-    icon: <GitBranch size={20} />,
-    title: "Execution visibility",
+    eyebrow: "Analysis",
+    title: "Keep AI outputs structured and reviewable.",
     description:
-      "See how code behaves across each step so algorithm logic becomes easier to grasp and explain.",
+      "The PRD commits to deterministic analysis with schema validation, pseudocode, algorithm steps, and explicit time and space complexity.",
   },
   {
-    icon: <Activity size={20} />,
-    title: "Performance awareness",
+    eyebrow: "History",
+    title: "Preserve the learning path across sessions.",
     description:
-      "Connect your implementation with complexity and efficiency insights in the same workflow.",
+      "Saved sessions, restorable traces, and contextual chat are part of the core loop, not an afterthought attached to a code runner.",
   },
+];
+
+const surfaceRules = [
+  "Neutral surfaces, border-led structure, and restrained shadows.",
+  "Display typography for product positioning and mono labels for technical context.",
+  "Black primary CTA with a hero-scale mesh atmosphere instead of repeated component gradients.",
 ];
 
 export function LandingFeatureSection() {
   return (
-    <section className="mx-auto w-full max-w-7xl px-6 pb-24 lg:px-10">
-      <div className="rounded-[32px] border border-[#e5e7eb] bg-white p-8 shadow-[0_20px_60px_rgba(15,23,42,0.06)] lg:p-10">
-        <div className="max-w-2xl">
-          <p className="inline-flex items-center gap-2 text-sm font-medium uppercase tracking-[0.22em] text-[#6366f1]">
-            <Sparkles size={15} />
-            What CodeVista helps you do
-          </p>
-          <h2 className="mt-3 text-3xl font-semibold tracking-tight text-[#111827]">
-            Move from writing code to truly understanding it.
-          </h2>
-          <p className="mt-4 text-base leading-8 text-gray-500">
-            The landing experience now reflects the actual product goal:
-            helping users learn, visualize, and analyze code with a consistent
-            interface from homepage to authentication to editor.
-          </p>
+    <section className="px-6 pb-24 lg:px-10">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-16">
+        <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="max-w-xl">
+            <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+              UI direction for this migration
+            </p>
+            <h2 className="font-display mt-4 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+              One workflow instead of five tabs.
+            </h2>
+            <p className="mt-4 text-[16px] leading-7 text-[var(--body)]">
+              The repo’s product context is consistent: CodeVista is not just a
+              code runner. It is an editor, execution layer, AI analysis
+              surface, visualizer, and learning history system. The landing page
+              now reflects that exact structure.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            {surfaceRules.map((rule) => (
+              <div
+                key={rule}
+                className="rounded-xl border border-[var(--hairline)] bg-white p-5 cv-shadow-sm"
+              >
+                <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+                  Rule
+                </p>
+                <p className="mt-3 text-sm leading-6 text-[var(--ink)]">{rule}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-8 grid gap-5 lg:grid-cols-3">
-          {featureList.map((feature) => (
-            <div
-              key={feature.title}
-              className="rounded-[24px] border border-[#e5e7eb] bg-[#f8fafc] p-6 transition hover:border-[#c7d2fe] hover:bg-[#f8faff]"
+        <div className="grid gap-4 lg:grid-cols-3">
+          {capabilityCards.map((card) => (
+            <article
+              key={card.title}
+              className="cv-shadow-md rounded-xl border border-[var(--hairline)] bg-white p-6"
             >
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#6366f1] via-[#7c3aed] to-[#4f46e5] text-white shadow-md">
-                {feature.icon}
-              </div>
-              <h3 className="mt-5 text-xl font-semibold text-[#111827]">
-                {feature.title}
+              <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+                {card.eyebrow}
+              </p>
+              <h3 className="font-display mt-4 text-[24px] font-semibold tracking-[-0.96px] text-[var(--ink)]">
+                {card.title}
               </h3>
-              <p className="mt-3 text-sm leading-7 text-gray-500">
-                {feature.description}
+              <p className="mt-3 text-sm leading-7 text-[var(--body)]">
+                {card.description}
+              </p>
+            </article>
+          ))}
+        </div>
+
+        <div className="rounded-2xl bg-[var(--ink)] px-6 py-8 text-[var(--on-primary)] sm:px-8 sm:py-10">
+          <div className="grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
+            <div className="max-w-3xl">
+              <p className="font-mono-ui text-[12px] text-white/55">
+                Next migration path
+              </p>
+              <h2 className="font-display mt-4 text-[32px] font-semibold tracking-[-1.28px] text-white">
+                If this page is approved, the same system can be applied to the
+                rest of the public surface and then the app shell.
+              </h2>
+              <p className="mt-4 text-[16px] leading-7 text-white/72">
+                The repo still contains the earlier violet-gradient language on
+                login, register, about, contact, history, settings, and the
+                editor shell. This landing page is now the first controlled
+                reference for migrating those surfaces one by one.
               </p>
             </div>
-          ))}
+
+            <Link
+              href="/editor"
+              className="inline-flex h-12 items-center gap-2 rounded-[100px] bg-white px-6 text-[16px] font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)]"
+            >
+              Inspect the current app
+              <ArrowRight size={16} />
+            </Link>
+          </div>
         </div>
       </div>
     </section>

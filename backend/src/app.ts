@@ -11,6 +11,7 @@ import sessionRoutes from "./routes/session.routes";
 import historyRoutes from "./routes/history.routes";
 import chatRoutes from "./routes/chat.routes";
 import workspaceRoutes from "./routes/workspace.routes";
+import authRoutes from "./routes/auth.routes";
 import { MAX_JSON_BODY_SIZE } from "./middleware/rateLimit.middleware";
 
 const app = express();
@@ -54,6 +55,7 @@ app.get("/", (req, res) => {
       "GET /api/session/history",
       "POST /api/chat",
       "POST /api/chat/batch",
+      "POST /api/auth/password/reset/request",
     ],
   });
 });
@@ -65,6 +67,7 @@ apiRouter.use("/languages", languageRoutes);
 apiRouter.use("/session", sessionRoutes);
 apiRouter.use("/history", historyRoutes);
 apiRouter.use("/chat", chatRoutes);
+apiRouter.use("/auth", authRoutes);
 
 app.use("/api", apiRouter);
 

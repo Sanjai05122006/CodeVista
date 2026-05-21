@@ -28,6 +28,11 @@ router.post(
   validateChatBatchRequest,
   saveBatch
 );
-router.get("/:threadId", authMiddleware, getThreadMessages);
+router.get(
+  "/:threadId",
+  authMiddleware,
+  expensiveEndpointRateLimits.chatRead,
+  getThreadMessages
+);
 
 export default router;

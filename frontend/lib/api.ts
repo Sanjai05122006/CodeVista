@@ -205,3 +205,25 @@ export async function fetchSessionDetail(sessionId: string, accessToken: string)
     method: "GET",
   });
 }
+
+export async function requestPasswordReset(email: string) {
+  const response = await fetch(buildApiUrl("/auth/password/reset/request"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { ok?: boolean; message?: string; error?: string }
+    | null;
+
+  if (!response.ok) {
+    throw new Error(
+      data?.message || data?.error || "Unable to request password reset."
+    );
+  }
+
+  return data ?? { ok: true };
+}
