@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
+import { getSessionSafely } from "@/lib/auth-session";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -10,12 +10,12 @@ export default function AuthCallbackPage() {
   useEffect(() => {
     let mounted = true;
 
-    void supabase.auth.getSession().then(async ({ data }) => {
+    void getSessionSafely().then(({ session }) => {
       if (!mounted) {
         return;
       }
 
-      router.replace(data.session ? "/" : "/login");
+      router.replace(session ? "/" : "/login");
     });
 
     return () => {
@@ -24,7 +24,7 @@ export default function AuthCallbackPage() {
   }, [router]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[#f8fafc] text-sm text-gray-500">
+    <main className="min-h-screen flex items-center justify-center bg-[var(--canvas-soft)] text-sm text-[var(--body)]">
       Completing sign in...
     </main>
   );

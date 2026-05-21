@@ -34,6 +34,7 @@ let nextCleanupAt = Date.now() + DEFAULT_CLEANUP_INTERVAL_MS;
 export const MAX_JSON_BODY_SIZE = "64kb";
 export const MAX_CODE_LENGTH = 20_000;
 export const MAX_LANGUAGE_LENGTH = 32;
+export const MAX_EMAIL_LENGTH = 320;
 export const MAX_STDIN_LENGTH = 2_000;
 export const MAX_CHAT_MESSAGE_LENGTH = 4_000;
 export const MAX_CHAT_HISTORY_MESSAGES = 20;
@@ -316,6 +317,35 @@ export const validateExecutionRequest = (
 };
 
 export const validateAnalysisRequest = validateExecutionRequest;
+
+export const validatePasswordResetRequest = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    assertObjectBody(req);
+    validateTrimmedString(req, {
+      field: "email",
+      maxLength: MAX_EMAIL_LENGTH,
+    });
+
+    const email = String(req.body.email);
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      throw new AppError(
+        "INVALID_REQUEST_BODY",
+        400,
+        "email must be a valid email address."
+      );
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
 
 export const validateChatRequest = (
   req: Request,
@@ -755,6 +785,42 @@ export const expensiveEndpointRateLimits = {
     name: "chat-batch",
     anonymousLimit: 30,
     authenticatedLimit: 90,
+    windowMs: 60_000,
+  }),
+  workspace: createRateLimitMiddleware({
+    name: "workspace",
+    anonymousLimit: 8,
+    authenticatedLimit: 20,
+    windowMs: 60_000,
+  }),
+  passwordResetRequest: createRateLimitMiddleware({
+    name: "password-reset-request",
+    anonymousLimit: 3,
+    authenticatedLimit: 5,
+    windowMs: 15 * 60_000,
+  }),
+  sessionSave: createRateLimitMiddleware({
+    name: "session-save",
+    anonymousLimit: 5,
+    authenticatedLimit: 20,
+    windowMs: 5 * 60_000,
+  }),
+  sessionRead: createRateLimitMiddleware({
+    name: "session-read",
+    anonymousLimit: 10,
+    authenticatedLimit: 120,
+    windowMs: 60_000,
+  }),
+  languageList: createRateLimitMiddleware({
+    name: "language-list",
+    anonymousLimit: 30,
+    authenticatedLimit: 120,
+    windowMs: 5 * 60_000,
+  }),
+  chatRead: createRateLimitMiddleware({
+    name: "chat-read",
+    anonymousLimit: 5,
+    authenticatedLimit: 120,
     windowMs: 60_000,
   }),
 };

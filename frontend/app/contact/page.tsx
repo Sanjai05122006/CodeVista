@@ -1,133 +1,171 @@
-import Link from "next/link";
-import { ArrowRight, Bug, LifeBuoy, Mail, MessageSquare } from "lucide-react";
+"use client";
+
+import { useMemo, useState } from "react";
+import { CheckCircle2, Mail } from "lucide-react";
 import { PublicPageFrame } from "@/components/layout/public-page-frame";
 
-const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || null;
-const githubUrl = process.env.NEXT_PUBLIC_GITHUB_URL?.trim() || null;
-
-const contactCards = [
-  {
-    title: "Support",
-    description:
-      "Use this for help with accounts, saved sessions, execution replay, and product usage.",
-    icon: LifeBuoy,
-    actionLabel: supportEmail ? "Email support" : "Support email not configured",
-    href: supportEmail ? `mailto:${supportEmail}?subject=CodeVista%20Support` : null,
-  },
-  {
-    title: "Bug reports",
-    description:
-      "Use this when something breaks and you want to report the issue with enough detail to reproduce it.",
-    icon: Bug,
-    actionLabel: githubUrl ? "Open repository" : "Repository link not configured",
-    href: githubUrl,
-  },
-  {
-    title: "Contact us",
-    description:
-      "Use this for demos, collaboration, classroom usage, or general product questions.",
-    icon: MessageSquare,
-    actionLabel: supportEmail ? "Send message" : "Contact channel not configured",
-    href: supportEmail ? `mailto:${supportEmail}?subject=CodeVista%20Contact` : null,
-  },
-];
+const supportEmail =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "sanjai05126@gmail.com";
 
 export default function ContactPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  const [showValidation, setShowValidation] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
+
+  const canSubmit = name.trim() && email.trim() && message.trim();
+
+  const mailtoHref = useMemo(() => {
+    if (!canSubmit) {
+      return null;
+    }
+
+    const subject = encodeURIComponent("CodeVista support request");
+    const body = encodeURIComponent(
+      [
+        `Name: ${name.trim()}`,
+        `Email: ${email.trim()}`,
+        "",
+        "Message:",
+        message.trim(),
+      ].join("\n")
+    );
+
+    return `mailto:${supportEmail}?subject=${subject}&body=${body}`;
+  }, [canSubmit, email, message, name]);
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!canSubmit) {
+      setShowValidation(true);
+      return;
+    }
+
+    setShowValidation(false);
+    setDraftReady(true);
+  };
+
   return (
-    <PublicPageFrame>
-      <main className="px-6 py-6 pb-12 text-[#111827]">
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
-        <section className="overflow-hidden rounded-[36px] border border-white/70 bg-[radial-gradient(circle_at_top_left,rgba(99,102,241,0.16),transparent_28%),radial-gradient(circle_at_top_right,rgba(59,130,246,0.14),transparent_30%),linear-gradient(180deg,#ffffff_0%,#eef2ff_52%,#eff6ff_100%)] shadow-[0_24px_70px_rgba(15,23,42,0.08)]">
-          <div className="px-8 py-10 lg:px-12 lg:py-14">
-            <p className="text-xs uppercase tracking-[0.28em] text-[#4f46e5]">
-              Contact
-            </p>
-            <h1 className="mt-4 max-w-4xl text-4xl font-semibold tracking-tight text-[#111827] sm:text-5xl">
-              Simple support and contact paths for the product.
-            </h1>
-            <p className="mt-6 max-w-3xl text-base leading-8 text-gray-600">
-              If you need help with saved sessions, product usage, or reporting
-              an issue, use the route that matches the task. Keep the message
-              short, specific, and tied to the affected workflow.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/history"
-                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#6366f1] via-[#7c3aed] to-[#4f46e5] px-5 py-3 text-sm font-medium text-white shadow-[0_16px_40px_rgba(99,102,241,0.28)] transition hover:translate-y-[-1px]"
-              >
-                View Sessions
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                href="/about"
-                className="inline-flex items-center gap-2 rounded-2xl border border-[#c7d2fe] bg-white px-5 py-3 text-sm font-medium text-[#4338ca] transition hover:bg-[#f8faff]"
-              >
-                About CodeVista
-              </Link>
-            </div>
-          </div>
-        </section>
-
-        <section className="grid gap-5 lg:grid-cols-3">
-          {contactCards.map((item) => {
-            const Icon = item.icon;
-
-            return (
-              <article
-                key={item.title}
-                className="rounded-[30px] border border-[#e5e7eb] bg-white p-7 shadow-[0_18px_55px_rgba(15,23,42,0.06)]"
-              >
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#eef2ff] to-[#eff6ff] text-[#4f46e5]">
-                  <Icon size={20} />
-                </div>
-                <h2 className="mt-5 text-2xl font-semibold tracking-tight text-[#111827]">
-                  {item.title}
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-gray-600">
-                  {item.description}
-                </p>
-
-                {item.href ? (
-                  <a
-                    href={item.href}
-                    target={item.href.startsWith("http") ? "_blank" : undefined}
-                    rel={item.href.startsWith("http") ? "noreferrer" : undefined}
-                    className="mt-6 inline-flex items-center gap-2 rounded-2xl border border-[#c7d2fe] bg-[#eef2ff] px-4 py-3 text-sm font-medium text-[#4338ca] transition hover:bg-[#e0e7ff]"
-                  >
-                    {item.actionLabel}
-                    <ArrowRight size={15} />
-                  </a>
-                ) : (
-                  <div className="mt-6 rounded-2xl border border-dashed border-[#dbe4f0] px-4 py-3 text-sm text-gray-500">
-                    {item.actionLabel}
-                  </div>
-                )}
-              </article>
-            );
-          })}
-        </section>
-
-        <section className="rounded-[30px] border border-[#e5e7eb] bg-white p-7 shadow-[0_18px_55px_rgba(15,23,42,0.06)]">
-          <div className="flex items-start gap-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#eef2ff] to-[#eff6ff] text-[#4f46e5]">
-              <Mail size={20} />
-            </div>
-            <div className="max-w-3xl">
-              <h2 className="text-2xl font-semibold tracking-tight text-[#111827]">
-                What to send with a support request
-              </h2>
-              <p className="mt-3 text-sm leading-7 text-gray-600">
-                Include the session ID when relevant, the exact error text, and
-                whether the problem happened during run, analysis, chat, or
-                session reopen. That is usually enough to investigate the issue
-                properly.
+    <PublicPageFrame headerVariant="landing">
+      <main className="px-6 py-10 pb-16 text-[var(--ink)] lg:px-10">
+        <div className="mx-auto flex w-full max-w-7xl justify-center">
+          <section className="cv-shadow-lg w-full max-w-2xl rounded-2xl border border-[var(--hairline)] bg-white p-8 lg:p-10">
+            <div className="text-center">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] text-[var(--ink)]">
+                <Mail size={20} />
+              </div>
+              <p className="font-mono-ui mt-4 text-[12px] text-[var(--mute)]">
+                Contact
+              </p>
+              <h1 className="font-display mt-3 text-4xl font-semibold tracking-[-1.28px] text-[var(--ink)] sm:text-5xl">
+                How can we help?
+              </h1>
+              <p className="mx-auto mt-4 max-w-xl text-base leading-8 text-[var(--body)]">
+                Share your question or the problem you faced while using
+                CodeVista. Keep it simple and tell us what happened.
               </p>
             </div>
-          </div>
-        </section>
+
+            {draftReady && mailtoHref ? (
+              <div className="mt-10 rounded-2xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-6 text-center">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ink)] text-[var(--on-primary)]">
+                  <CheckCircle2 size={20} />
+                </div>
+                <h2 className="font-display mt-4 text-2xl font-semibold tracking-[-0.72px] text-[var(--ink)]">
+                  Your message is ready.
+                </h2>
+                <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--body)]">
+                  We prepared your support email for {supportEmail}. Open your
+                  email app, review the draft, and send it when you are ready.
+                </p>
+
+                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+                  <a
+                    href={mailtoHref}
+                    className="inline-flex h-12 items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
+                  >
+                    Open email draft
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => setDraftReady(false)}
+                    className="inline-flex h-12 items-center justify-center rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)]"
+                  >
+                    Edit message
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <form onSubmit={handleSubmit} className="mt-10 grid gap-5">
+                <div className="grid gap-5 sm:grid-cols-2">
+                  <Field label="Your name">
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="Enter your name"
+                      className="h-11 w-full rounded-md border border-[var(--hairline)] bg-white px-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--mute)] focus:border-[var(--ink)]"
+                    />
+                  </Field>
+
+                  <Field label="Email address">
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      placeholder="Enter your email"
+                      className="h-11 w-full rounded-md border border-[var(--hairline)] bg-white px-4 text-sm text-[var(--ink)] outline-none transition placeholder:text-[var(--mute)] focus:border-[var(--ink)]"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Your message">
+                  <textarea
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    placeholder="Tell us what happened or what you need help with."
+                    className="min-h-[180px] w-full rounded-md border border-[var(--hairline)] bg-white px-4 py-3 text-sm leading-6 text-[var(--ink)] outline-none transition placeholder:text-[var(--mute)] focus:border-[var(--ink)]"
+                  />
+                </Field>
+
+                {showValidation && !canSubmit ? (
+                  <p className="text-sm text-red-600">
+                    Fill in your name, email, and message before submitting.
+                  </p>
+                ) : null}
+
+                <p className="text-sm text-[var(--body)]">
+                  We will use your email only to reply to your message.
+                </p>
+
+                <button
+                  type="submit"
+                  className="inline-flex h-12 items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  Prepare message
+                </button>
+              </form>
+            )}
+          </section>
         </div>
       </main>
     </PublicPageFrame>
+  );
+}
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="grid gap-2">
+      <span className="text-sm font-medium text-[var(--ink)]">{label}</span>
+      {children}
+    </label>
   );
 }

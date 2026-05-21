@@ -59,10 +59,16 @@ export default function HistoryPage() {
           const parsed = JSON.parse(cached) as HistoryCachePayload;
 
           if (Array.isArray(parsed.items) && typeof parsed.hasMore === "boolean") {
-            setItems(parsed.items);
-            setHasMore(parsed.hasMore);
-            setFetching(false);
-            setError(null);
+            queueMicrotask(() => {
+              if (!active) {
+                return;
+              }
+
+              setItems(parsed.items);
+              setHasMore(parsed.hasMore);
+              setFetching(false);
+              setError(null);
+            });
             return () => {
               active = false;
             };
@@ -154,10 +160,10 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <PublicPageFrame>
-        <main className="flex min-h-full px-6 py-10 text-gray-500">
+      <PublicPageFrame headerVariant="landing">
+        <main className="flex min-h-full px-6 py-10 text-[var(--body)] lg:px-10">
           <div className="mx-auto flex w-full max-w-5xl flex-1 items-start">
-            <div className="w-full rounded-[32px] border border-white/60 bg-white/65 p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+            <div className="cv-shadow-lg w-full rounded-2xl border border-[var(--hairline)] bg-white p-8">
               Loading history...
             </div>
           </div>
@@ -167,20 +173,20 @@ export default function HistoryPage() {
   }
 
   return (
-    <PublicPageFrame>
-      <main className="flex min-h-full px-6 py-10 pb-16 text-[#111827]">
+    <PublicPageFrame headerVariant="landing">
+      <main className="flex min-h-full px-6 py-10 pb-16 text-[var(--ink)] lg:px-10">
         <div className="mx-auto max-w-5xl">
-        <div className="rounded-[32px] border border-white/65 bg-[linear-gradient(145deg,rgba(238,242,255,0.82),rgba(248,250,252,0.88),rgba(255,255,255,0.82))] p-8 shadow-[0_24px_70px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+        <div className="cv-shadow-lg rounded-2xl border border-[var(--hairline)] bg-white p-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-[#c7d2fe] bg-white px-4 py-1.5 text-sm text-[#4f46e5]">
+              <div className="font-mono-ui inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-4 py-1.5 text-[12px] text-[var(--body)]">
                 <History size={15} />
                 History
               </div>
-              <h1 className="mt-5 text-4xl font-bold tracking-tight text-[#111827]">
+              <h1 className="font-display mt-5 text-4xl font-semibold tracking-[-1.28px] text-[var(--ink)]">
                 Your saved coding sessions
               </h1>
-              <p className="mt-3 max-w-2xl text-base leading-8 text-gray-500">
+              <p className="mt-3 max-w-2xl text-base leading-8 text-[var(--body)]">
                 Reopen previous work with its saved code, analysis, execution
                 output, and attached conversation context. This is the recovery
                 layer that keeps CodeVista useful across multiple learning
@@ -190,7 +196,7 @@ export default function HistoryPage() {
 
             <Link
               href="/editor"
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-[#6366f1] via-[#7c3aed] to-[#4f46e5] px-5 py-3 text-sm font-medium text-white shadow-[0_18px_45px_rgba(99,102,241,0.28)]"
+              className="inline-flex h-12 items-center gap-2 rounded-[100px] bg-[var(--ink)] px-5 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
             >
               Open Editor
               <MoveRight size={16} />
@@ -199,19 +205,19 @@ export default function HistoryPage() {
 
           <div className="mt-10">
             {fetching ? (
-              <div className="rounded-[28px] border border-white/70 bg-white/75 p-8 text-sm text-gray-500 shadow-[0_18px_45px_rgba(15,23,42,0.05)] backdrop-blur-xl">
+              <div className="rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-8 text-sm text-[var(--body)]">
                 Fetching saved sessions...
               </div>
             ) : error ? (
-              <div className="rounded-[28px] border border-red-200 bg-red-50 p-8 text-sm text-red-500">
+              <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-sm text-red-600">
                 {error}
               </div>
             ) : items.length === 0 ? (
-              <div className="rounded-[28px] border border-white/70 bg-white/75 p-8 shadow-[0_18px_45px_rgba(15,23,42,0.05)] backdrop-blur-xl">
-                <p className="text-lg font-semibold text-[#111827]">
+              <div className="rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-8">
+                <p className="font-display text-lg font-semibold tracking-[-0.54px] text-[var(--ink)]">
                   No saved sessions yet
                 </p>
-                <p className="mt-2 text-sm leading-7 text-gray-500">
+                <p className="mt-2 text-sm leading-7 text-[var(--body)]">
                   Run code in the editor and save activity through the existing
                   session pipeline. Your recent work will appear here once
                   records exist.
@@ -222,22 +228,22 @@ export default function HistoryPage() {
                 {items.map((item) => (
                   <div
                     key={item.id}
-                    className="rounded-[28px] border border-white/70 bg-white/72 p-6 shadow-[0_18px_45px_rgba(15,23,42,0.06)] backdrop-blur-xl"
+                    className="cv-shadow-md rounded-xl border border-[var(--hairline)] bg-white p-6"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                       <div>
-                        <p className="text-xl font-semibold text-[#111827]">
+                        <p className="font-display text-xl font-semibold tracking-[-0.6px] text-[var(--ink)]">
                           {item.title || "Untitled session"}
                         </p>
-                        <div className="mt-2 flex items-center gap-2 text-sm text-gray-500">
+                        <div className="mt-2 flex items-center gap-2 text-sm text-[var(--body)]">
                           <Clock3 size={14} />
                           {new Date(item.created_at).toLocaleString()}
                         </div>
                         <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">
+                          <span className="font-mono-ui rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-1 text-[11px] text-[var(--body)]">
                             {item.language || "Unknown language"}
                           </span>
-                          <span className="rounded-full border border-[#e5e7eb] bg-[#f8fafc] px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-gray-500">
+                          <span className="font-mono-ui rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-1 text-[11px] text-[var(--body)]">
                             {item.execution_count} run{item.execution_count === 1 ? "" : "s"}
                           </span>
                         </div>
@@ -245,7 +251,7 @@ export default function HistoryPage() {
 
                       <Link
                         href={`/editor?sessionId=${item.id}`}
-                        className="inline-flex items-center justify-center rounded-full border border-[#c7d2fe] bg-[#eef2ff] px-4 py-2 text-xs font-medium uppercase tracking-[0.18em] text-[#4f46e5] transition hover:bg-[#e0e7ff]"
+                        className="inline-flex items-center justify-center rounded-[100px] bg-[var(--ink)] px-4 py-2 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
                       >
                         Reopen Session
                       </Link>
@@ -261,7 +267,7 @@ export default function HistoryPage() {
                         void loadMore();
                       }}
                       disabled={fetchingMore}
-                      className="inline-flex items-center justify-center rounded-2xl border border-[#c7d2fe] bg-white/80 px-5 py-3 text-sm font-medium text-[#4f46e5] shadow-[0_12px_30px_rgba(15,23,42,0.04)] backdrop-blur transition hover:bg-[#eef2ff] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex items-center justify-center rounded-[100px] border border-[var(--hairline)] bg-white px-5 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {fetchingMore ? "Loading more..." : "Show More"}
                     </button>

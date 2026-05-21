@@ -1,19 +1,20 @@
 import { Router } from "express";
-import { runWorkspace } from "../controllers/workspace.controller";
+import { requestPasswordResetHandler } from "../controllers/auth.controller";
 import { optionalAuthMiddleware } from "../middleware/optional-auth.middleware";
 import {
   expensiveEndpointRateLimits,
-  validateExecutionRequest,
+  validatePasswordResetRequest,
 } from "../middleware/rateLimit.middleware";
 
 const router = Router();
 
 router.use(optionalAuthMiddleware);
+
 router.post(
-  "/",
-  expensiveEndpointRateLimits.workspace,
-  validateExecutionRequest,
-  runWorkspace
+  "/password/reset/request",
+  expensiveEndpointRateLimits.passwordResetRequest,
+  validatePasswordResetRequest,
+  requestPasswordResetHandler
 );
 
 export default router;
