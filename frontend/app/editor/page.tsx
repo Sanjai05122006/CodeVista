@@ -10,8 +10,10 @@ import AnalysisPanel from "../../components/analysis-panel";
 import ChatContainer from "@/components/chat/ChatContainer";
 import {
   fetchSessionDetail,
+  runWorkspace,
   type BufferedExecution,
   type SessionDetail,
+  type WorkspaceAnalysisResult,
 } from "@/lib/api";
 import { useAuth } from "@/lib/auth-context";
 import { useSessionBuffer } from "@/hooks/useSessionBuffer";
@@ -38,34 +40,17 @@ type ExecutionData = {
   stderr?: string;
   runtime_ms?: number;
   memory_kb?: number;
+  status?: string;
+  source?: string;
   error?: {
+    code?: string;
     message?: string;
   };
-};
-
-type AnalysisResponsePayload = {
-  error?: string;
-  message?: string;
-  algorithm_name?: string;
-  pseudocode?: string[];
-  algorithm_steps?: string[];
-  time_complexity?: {
-    best: string;
-    average: string;
-    worst: string;
-  };
-  space_complexity?: string;
-  source?: "cache" | "gemini" | "groq";
-  execution_trace?: unknown[];
-  explanation?: string;
 };
 
 const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
 });
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
 
 function EditorWorkspace() {
   const router = useRouter();
@@ -135,10 +120,15 @@ function EditorWorkspace() {
       title: derivedTitle,
       language,
       code,
+      stdin,
       analysis,
       execution: result,
+      trace: {
+        total_steps: traceSteps.length,
+        preview: traceSteps.slice(0, 5),
+      },
     }),
-    [analysis, code, derivedTitle, language, result]
+    [analysis, code, derivedTitle, language, result, stdin, traceSteps]
   );
 
   useEffect(() => {
@@ -308,60 +298,11 @@ function EditorWorkspace() {
       setAnalysis(null);
       setTraceSteps([]);
 
-      const executionPayload = JSON.stringify({ code, language, stdin });
-      const headers = {
-        "Content-Type": "application/json",
-      };
-
-      const executionRequest = fetch(`${API_BASE_URL}/execution`, {
-        method: "POST",
-        headers,
-        body: executionPayload,
-      });
-      const analysisRequest = fetch(`${API_BASE_URL}/analysis`, {
-        method: "POST",
-        headers,
-        body: executionPayload,
-      })
-        .then(async (response) => ({
-          response,
-          data: await response.json(),
-        }))
-        .catch((error) => ({
-          response: null as Response | null,
-          data: null as unknown,
-          error,
-        }));
-
-      const executionRes = await executionRequest;
-      const executionData = await executionRes.json();
-
-      if (!executionRes.ok || executionData.error) {
-        setExecutionError(
-          executionData?.error?.message ||
-            "⚠️ Unable to run code. Please try again."
-        );
-        setResult(null);
-        return;
-      }
+      const workspace = await runWorkspace({ code, language, stdin });
+      const executionData = workspace.execution;
+      const analysisData = workspace.analysis;
 
       setResult(executionData);
-      setLoading(false);
-
-      const analysisResult = await analysisRequest;
-      const analysisRes = analysisResult.response;
-      const analysisRequestError =
-        "error" in analysisResult ? analysisResult.error : null;
-      const analysisData = analysisResult.data as AnalysisResponsePayload | null;
-
-      if (!analysisRes || analysisRequestError || !analysisData || analysisData.error) {
-        setAnalysisError(
-          analysisData?.message ||
-            "⚠️ Analysis is unavailable right now. Please try again."
-        );
-        return;
-      }
-
       setAnalysis({
         algorithm_name: analysisData.algorithm_name || "",
         pseudocode: analysisData.pseudocode || [],
@@ -374,9 +315,24 @@ function EditorWorkspace() {
         space_complexity: analysisData.space_complexity || "",
         source: analysisData.source || "cache",
       });
-      const nextTraceSteps = normalizeTrace(analysisData.execution_trace || []);
+
+      const nextTraceSteps = normalizeTrace(
+        workspace.trace?.length ? workspace.trace : analysisData.execution_trace || []
+      );
       setTraceSteps(nextTraceSteps);
-      const nextSessionTitle = deriveSessionTitle(code, analysisData);
+
+      if (executionData.error?.message) {
+        setExecutionError(executionData.error.message);
+      }
+
+      if (!analysisData.algorithm_name && analysisData.pseudocode.length === 0) {
+        setAnalysisError("⚠️ Analysis is unavailable right now. Please try again.");
+      }
+
+      const nextSessionTitle = deriveSessionTitle(
+        code,
+        analysisData as WorkspaceAnalysisResult
+      );
 
       if (accessToken) {
         appendExecution(
@@ -417,27 +373,38 @@ function EditorWorkspace() {
     }
   };
 
+  const openVisualizer = () => {
+    const activeSessionId = sessionId ?? requestedSessionId;
+    router.push(
+      activeSessionId
+        ? `/editor/insights?sessionId=${encodeURIComponent(activeSessionId)}`
+        : "/editor/insights"
+    );
+  };
+
   if (authLoading || restoringSession) {
     return (
-      <main className="min-h-screen flex items-center justify-center bg-[#020617] text-sm text-gray-400">
+      <main className="flex min-h-screen items-center justify-center bg-[#020617] text-sm text-gray-400">
         {restoringSession ? "Restoring saved session..." : "Loading workspace..."}
       </main>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white flex justify-center px-3 py-3">
-      <div className="w-full max-w-[1400px] min-h-[calc(100vh-24px)] flex flex-col gap-3">
+    <div className="flex min-h-screen justify-center bg-[#020617] px-3 py-3 text-white">
+      <div className="flex min-h-[calc(100vh-24px)] w-full max-w-[1400px] flex-col gap-3">
         <div className="flex items-center justify-between px-1">
           <div>
-            <h1 className="text-lg font-semibold text-indigo-400">CodeVista</h1>
+            <h1 className="text-lg font-semibold text-indigo-400">
+              CodeVista Workspace
+            </h1>
             <p className="text-[11px] text-gray-400">
               {session ? "Interactive Code Workspace" : "Interactive Code Workspace · Guest mode"}
             </p>
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="text-[10px] text-gray-500 uppercase">
+            <span className="text-[10px] uppercase tracking-[0.18em] text-gray-500">
               {language}
             </span>
             {session ? (
@@ -464,13 +431,13 @@ function EditorWorkspace() {
           </div>
         </div>
 
-        <div className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden">
-            <div className="lg:w-[70%] min-h-[420px] lg:min-h-0 flex flex-col bg-[#0f172a]">
-              <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10 bg-[#111827]">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden lg:flex-row">
+            <div className="flex min-h-[420px] flex-col rounded-2xl bg-[#0f172a] lg:min-h-0 lg:w-[70%]">
+              <div className="flex items-center gap-3 border-b border-white/10 bg-[#111827] px-4 py-3">
                 <select
                   value={language}
                   onChange={(e) => setLanguage(e.target.value)}
-                  className="px-3 py-1.5 bg-[#020617] border border-white/10 rounded-md text-sm"
+                  className="rounded-md border border-white/10 bg-[#020617] px-3 py-1.5 text-sm text-gray-100 outline-none"
                 >
                   <option value="javascript">JavaScript</option>
                   <option value="python">Python</option>
@@ -480,7 +447,7 @@ function EditorWorkspace() {
                 <button
                   onClick={runCode}
                   disabled={loading}
-                  className="ml-auto px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 rounded-md text-sm font-medium"
+                  className="ml-auto rounded-md bg-indigo-500 px-4 py-1.5 text-sm font-medium text-white transition hover:bg-indigo-600 disabled:opacity-50"
                 >
                   {loading ? "Running..." : "Run ▶"}
                 </button>
@@ -509,7 +476,7 @@ function EditorWorkspace() {
               <div className="border-t border-white/10 bg-[#0b1220] p-4">
                 <div className="mb-2 flex items-center justify-between">
                   <div>
-                    <h3 className="text-sm text-gray-200">Program Input</h3>
+                    <h3 className="text-sm text-gray-300">Program Input</h3>
                     <p className="text-[11px] text-gray-500">
                       Values sent to `input()` / stdin, one line per entry.
                     </p>
@@ -518,7 +485,7 @@ function EditorWorkspace() {
                     <button
                       type="button"
                       onClick={() => setStdin("")}
-                      className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-gray-400 transition hover:text-white"
+                      className="rounded-md border border-white/10 px-2.5 py-1 text-[11px] text-gray-400 transition hover:bg-white/5 hover:text-white"
                     >
                       Clear
                     </button>
@@ -533,37 +500,37 @@ function EditorWorkspace() {
               </div>
             </div>
 
-            <div className="lg:w-[30%] min-h-[380px] lg:min-h-0 flex flex-col bg-[#0b1220] p-4 gap-4">
+            <div className="flex min-h-[380px] flex-col gap-4 rounded-2xl bg-[#0b1220] p-4 lg:min-h-0 lg:w-[30%]">
               {executionError && (
-                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
                   {executionError}
                 </div>
               )}
               {saveError && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-sm">
+                <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-3 text-sm text-amber-300">
                   {saveError}
                 </div>
               )}
               {requestedSessionId && activeRestoredSessionTitle && (
-                <div className="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20 text-indigo-200 text-sm">
+                <div className="rounded-lg border border-white/10 bg-[#111827] p-3 text-sm text-gray-300">
                   Restored session: {activeRestoredSessionTitle}
                 </div>
               )}
 
               <div>
-                <h3 className="text-sm text-gray-300 mb-3">Performance</h3>
+                <h3 className="mb-3 text-sm text-gray-300">Performance</h3>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-[#111827] border border-white/10">
+                  <div className="rounded-lg border border-white/10 bg-[#111827] p-3">
                     <p className="text-xs text-gray-400">Runtime</p>
-                    <p className="text-indigo-400 font-mono text-lg">
+                    <p className="font-mono text-lg text-indigo-400">
                       {result?.runtime_ms ?? "--"} ms
                     </p>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-[#111827] border border-white/10">
+                  <div className="rounded-lg border border-white/10 bg-[#111827] p-3">
                     <p className="text-xs text-gray-400">Memory</p>
-                    <p className="text-green-400 font-mono text-lg">
+                    <p className="font-mono text-lg text-green-400">
                       {result?.memory_kb ?? "--"} KB
                     </p>
                   </div>
@@ -590,23 +557,16 @@ function EditorWorkspace() {
                       ? "bg-indigo-500 text-white"
                       : "text-gray-400 hover:text-white"
                   }`}
-                >
+                    >
                   Analysis
                 </button>
                 <button
                   type="button"
-                  onClick={() =>
-                    router.push(
-                      requestedSessionId
-                        ? `/editor/insights?sessionId=${encodeURIComponent(requestedSessionId)}`
-                        : "/editor/insights"
-                    )
-                  }
-                  className={`flex-1 rounded-lg px-3 py-2 text-sm transition ${
-                    "text-gray-400 hover:bg-white/5 hover:text-white"
-                  }`}
+                  onClick={openVisualizer}
+                  disabled={traceSteps.length === 0}
+                  className="flex-1 rounded-lg px-3 py-2 text-sm text-gray-400 transition hover:bg-white/5 hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
                 >
-                  Visualizer
+                  Focus Trace
                 </button>
               </div>
 
@@ -621,12 +581,12 @@ function EditorWorkspace() {
                       transition={{ duration: 0.2 }}
                       className="flex-1 min-h-0 flex flex-col"
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="mb-2 flex items-center justify-between">
                         <h3 className="text-sm text-gray-300">Console</h3>
 
                         {result && (
                           <span
-                            className={`text-xs px-2 py-1 rounded ${
+                            className={`rounded px-2 py-1 text-xs ${
                               result.stderr
                                 ? "bg-red-500/20 text-red-400"
                                 : "bg-green-500/20 text-green-400"
@@ -637,19 +597,19 @@ function EditorWorkspace() {
                         )}
                       </div>
 
-                      <div className="flex-1 min-h-[220px] rounded-xl bg-[#020617] border border-white/10 p-4 font-mono text-sm overflow-auto">
+                      <div className="flex-1 min-h-[220px] overflow-auto rounded-xl border border-[var(--hairline)] bg-[#111111] p-4 font-mono text-sm text-white">
                         {result?.error ? (
-                          <div className="text-yellow-400 whitespace-pre-wrap">
+                          <div className="whitespace-pre-wrap text-yellow-300">
                             ⚠️ {result.error.message}
                           </div>
                         ) : result?.stderr ? (
-                          <div className="text-red-400 whitespace-pre-wrap">
+                          <div className="whitespace-pre-wrap text-red-300">
                             ❌ Error:
                             {"\n"}
                             {result.stderr}
                           </div>
                         ) : result?.stdout ? (
-                          <div className="text-gray-200 whitespace-pre-wrap">
+                          <div className="whitespace-pre-wrap text-gray-200">
                             {result.stdout}
                           </div>
                         ) : (
@@ -668,10 +628,10 @@ function EditorWorkspace() {
                       transition={{ duration: 0.2 }}
                       className="flex-1 min-h-0 flex flex-col"
                     >
-                      <div className="flex items-center justify-between mb-2">
+                      <div className="mb-2 flex items-center justify-between">
                         <h3 className="text-sm text-gray-300">Analysis</h3>
                         {analysisLoading && (
-                          <span className="text-xs px-2 py-1 rounded bg-amber-500/20 text-amber-300">
+                          <span className="rounded bg-amber-500/20 px-2 py-1 text-xs text-amber-300">
                             Loading
                           </span>
                         )}
@@ -687,6 +647,7 @@ function EditorWorkspace() {
               </div>
             </div>
           </div>
+
       </div>
 
       {chatThreadId ? (
@@ -708,7 +669,7 @@ export default function EditorPage() {
   return (
     <Suspense
       fallback={
-        <main className="min-h-screen flex items-center justify-center bg-[#020617] text-sm text-gray-400">
+        <main className="flex min-h-screen items-center justify-center bg-[#020617] text-sm text-gray-400">
           Loading workspace...
         </main>
       }

@@ -22,6 +22,48 @@ export type BufferedExecution = {
   };
 };
 
+export type AnalysisProviderSource = "cache" | "gemini" | "groq";
+
+export type WorkspaceRunPayload = {
+  code: string;
+  language: string;
+  stdin?: string;
+};
+
+export type WorkspaceExecutionResult = {
+  stdout?: string;
+  stderr?: string;
+  runtime_ms?: number;
+  memory_kb?: number;
+  status?: string;
+  source?: string;
+  error?: {
+    code?: string;
+    message?: string;
+  };
+};
+
+export type WorkspaceAnalysisResult = {
+  algorithm_name: string;
+  pseudocode: string[];
+  algorithm_steps: string[];
+  time_complexity: {
+    best: string;
+    average: string;
+    worst: string;
+  };
+  space_complexity: string;
+  explanation: string;
+  execution_trace: unknown[];
+  source?: AnalysisProviderSource;
+};
+
+export type WorkspaceResponse = {
+  execution: WorkspaceExecutionResult;
+  analysis: WorkspaceAnalysisResult;
+  trace: unknown[];
+};
+
 export type SaveSessionPayload = {
   sessionId?: string;
   title?: string;
@@ -226,4 +268,30 @@ export async function requestPasswordReset(email: string) {
   }
 
   return data ?? { ok: true };
+}
+
+export async function runWorkspace(payload: WorkspaceRunPayload) {
+  const response = await fetch(buildApiUrl("/workspace"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | WorkspaceResponse
+    | { error?: string; message?: string }
+    | null;
+
+  if (!response.ok) {
+    const failure = data as { error?: string; message?: string } | null;
+    throw new Error(
+      failure?.message ||
+        failure?.error ||
+        "Unable to run the workspace request."
+    );
+  }
+
+  return data as WorkspaceResponse;
 }
