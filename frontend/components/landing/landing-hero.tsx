@@ -4,10 +4,16 @@ import { ArrowRight } from "lucide-react";
 
 export function LandingHero({ user }: { user: User | null }) {
   return (
-    <section className="px-6 pb-20 pt-14 lg:px-10 lg:pb-24 lg:pt-20">
+    <section className="relative px-6 pb-24 pt-16 lg:px-10 lg:pb-28 lg:pt-24">
+      <div className="pointer-events-none absolute inset-x-0 top-[-56px] -z-10 h-[680px]">
+        <div className="cv-hero-atmosphere absolute inset-x-[4%] top-0 h-full rounded-[40px]" />
+      </div>
+
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-16">
-        <div className="mx-auto flex w-full max-w-4xl flex-col items-center text-center">
-          <p className="font-mono-ui rounded-full border border-[var(--hairline)] bg-white px-4 py-1.5 text-[12px] text-[var(--body)] cv-shadow-sm">
+        <div className="relative mx-auto flex w-full max-w-4xl flex-col items-center text-center">
+          <div className="pointer-events-none absolute inset-x-10 top-20 -z-10 h-[360px] rounded-[999px] bg-white/72 blur-3xl" />
+
+          <p className="font-mono-ui rounded-full border border-white/70 bg-white/82 px-4 py-1.5 text-[12px] text-[var(--body)] backdrop-blur cv-shadow-sm">
             Developer intelligence platform
           </p>
 
@@ -32,7 +38,7 @@ export function LandingHero({ user }: { user: User | null }) {
             </Link>
             <Link
               href="/about"
-              className="inline-flex h-12 items-center rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-[16px] font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)]"
+              className="inline-flex h-12 items-center rounded-[100px] border border-white/70 bg-white/84 px-6 text-[16px] font-medium text-[var(--ink)] backdrop-blur transition hover:bg-white"
             >
               Read the product overview
             </Link>

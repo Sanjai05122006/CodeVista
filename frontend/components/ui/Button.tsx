@@ -1,14 +1,20 @@
-// components/ui/Button.tsx
-export function Button({ children }: { children: React.ReactNode }) {
+import type { ButtonHTMLAttributes, ReactNode } from "react";
+
+type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
+  children: ReactNode;
+};
+
+export function Button({
+  children,
+  className = "",
+  type = "button",
+  ...props
+}: ButtonProps) {
   return (
     <button
-      className="
-        w-full h-12
-        rounded-xl
-        text-white text-sm font-medium
-        bg-gradient-to-r from-[var(--primary-start)] to-[var(--primary-end)]
-        hover:opacity-90 transition
-      "
+      type={type}
+      className={`inline-flex h-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-[var(--ink)] px-4 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      {...props}
     >
       {children}
     </button>

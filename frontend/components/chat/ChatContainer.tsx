@@ -202,7 +202,7 @@ export default function CopilotWidget({
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-purple-600 to-indigo-600 text-white shadow-xl sm:bottom-8 sm:right-8"
+          className="cv-shadow-lg fixed bottom-6 right-6 flex h-14 w-14 items-center justify-center rounded-full border border-[var(--hairline)] bg-[var(--ink)] text-[var(--on-primary)] sm:bottom-8 sm:right-8"
         >
           <MessageSquare className="h-5 w-5" />
         </button>
@@ -210,47 +210,52 @@ export default function CopilotWidget({
 
       {open && (
         <div
-          className="fixed bottom-6 right-6 z-50 flex h-[620px] max-h-[78vh] w-[380px] max-w-[95vw] flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#0b0f1a]/90 shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur-xl sm:bottom-8 sm:right-8"
+          className="cv-shadow-lg fixed bottom-6 right-6 z-50 flex h-[620px] max-h-[78vh] w-[380px] max-w-[95vw] flex-col overflow-hidden rounded-2xl border border-[var(--hairline)] bg-[var(--canvas)] sm:bottom-8 sm:right-8"
         >
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/5 to-transparent" />
-
-          <div className="relative flex items-center justify-between bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-3 text-white">
+          <div className="relative flex items-center justify-between border-b border-[var(--hairline)] bg-[var(--canvas)] px-4 py-3 text-[var(--ink)]">
             <div>
-              <div className="font-semibold">CodeVista AI</div>
-              <div className="text-xs opacity-80">Your code-aware assistant</div>
+              <div className="font-display text-sm font-semibold tracking-[-0.02em]">
+                CodeVista assistant
+              </div>
+              <div className="text-xs text-[var(--mute)]">Code-aware workspace help</div>
             </div>
 
-            <button onClick={() => setOpen(false)}>✕</button>
+            <button
+              onClick={() => setOpen(false)}
+              className="rounded-md border border-[var(--hairline)] px-2 py-1 text-xs text-[var(--body)] transition hover:bg-[var(--canvas-soft)]"
+            >
+              Close
+            </button>
           </div>
 
-          <div className="relative flex flex-wrap items-center gap-2 px-4 py-2 text-xs text-white/60">
+          <div className="relative flex flex-wrap items-center gap-2 border-b border-[var(--hairline)] bg-[var(--canvas-soft)] px-4 py-2 text-xs text-[var(--mute)]">
             {restoredConversation ? (
-              <div className="inline-flex items-center gap-2 rounded-full border border-indigo-400/20 bg-indigo-500/10 px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-indigo-200">
-                <span className="h-2 w-2 rounded-full bg-indigo-300" />
+              <div className="inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--canvas)] px-2.5 py-1 text-[10px] uppercase tracking-[0.18em] text-[var(--body)]">
+                <span className="h-2 w-2 rounded-full bg-[var(--ink)]" />
                 Restored conversation
               </div>
             ) : null}
             {status === "saved" && (
               <>
-                <span className="h-2 w-2 rounded-full bg-green-400" />
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
                 Saved
               </>
             )}
             {status === "syncing" && (
               <>
-                <span className="h-2 w-2 animate-pulse rounded-full bg-yellow-400" />
+                <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
                 Syncing...
               </>
             )}
             {status === "error" && (
               <>
-                <span className="h-2 w-2 rounded-full bg-red-400" />
+                <span className="h-2 w-2 rounded-full bg-red-500" />
                 Connection issue
               </>
             )}
           </div>
 
-          <div className="relative flex-1 space-y-3 overflow-y-auto px-4 py-3">
+          <div className="relative flex-1 space-y-3 overflow-y-auto bg-[var(--canvas-soft)] px-4 py-3">
             {messages.map((msg) => (
               <div
                 key={msg.id}
@@ -261,8 +266,8 @@ export default function CopilotWidget({
                 <div
                   className={`max-w-[75%] rounded-xl px-4 py-2 text-sm ${
                     msg.role === "user"
-                      ? "bg-gradient-to-r from-purple-600 to-indigo-600 text-white"
-                      : "border border-white/10 bg-white/10 text-white backdrop-blur"
+                      ? "bg-[var(--ink)] text-[var(--on-primary)]"
+                      : "border border-[var(--hairline)] bg-[var(--canvas)] text-[var(--ink)]"
                   }`}
                 >
                   <div className="whitespace-pre-wrap">{msg.content}</div>
@@ -272,11 +277,11 @@ export default function CopilotWidget({
 
             {loadingAI && !stream && (
               <div className="flex justify-start">
-                <div className="w-[200px] max-w-[75%] rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur">
+                <div className="w-[200px] max-w-[75%] rounded-xl border border-[var(--hairline)] bg-[var(--canvas)] px-4 py-3">
                   <div className="space-y-2">
-                    <div className="shimmer h-3 rounded bg-white/10" />
-                    <div className="shimmer h-3 w-4/5 rounded bg-white/10" />
-                    <div className="shimmer h-3 w-2/3 rounded bg-white/10" />
+                    <div className="shimmer h-3 rounded bg-[var(--canvas-soft-2)]" />
+                    <div className="shimmer h-3 w-4/5 rounded bg-[var(--canvas-soft-2)]" />
+                    <div className="shimmer h-3 w-2/3 rounded bg-[var(--canvas-soft-2)]" />
                   </div>
                 </div>
               </div>
@@ -284,7 +289,7 @@ export default function CopilotWidget({
 
             {stream && (
               <div className="flex justify-start">
-                <div className="max-w-[75%] rounded-xl border border-white/10 bg-white/10 px-4 py-2 text-sm text-white backdrop-blur">
+                <div className="max-w-[75%] rounded-xl border border-[var(--hairline)] bg-[var(--canvas)] px-4 py-2 text-sm text-[var(--ink)]">
                   <div className="whitespace-pre-wrap">{typed}</div>
                 </div>
               </div>
@@ -293,9 +298,9 @@ export default function CopilotWidget({
             <div ref={bottomRef} />
           </div>
 
-          <div className="relative border-t border-white/10 bg-[#0b0f1a]/80 p-3 backdrop-blur">
+          <div className="relative border-t border-[var(--hairline)] bg-[var(--canvas)] p-3">
             {error ? (
-              <div className="mb-2 rounded-lg border border-red-400/20 bg-red-500/10 px-3 py-2 text-xs text-red-200">
+              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
                 {error}
               </div>
             ) : null}
@@ -306,7 +311,7 @@ export default function CopilotWidget({
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
                 placeholder="Ask anything about your code..."
-                className="flex-1 rounded-lg border border-white/10 bg-white/10 px-3 py-2 text-sm text-white outline-none placeholder:text-white/40"
+                className="flex-1 rounded-lg border border-[var(--hairline)] bg-[var(--canvas)] px-3 py-2 text-sm text-[var(--ink)] outline-none placeholder:text-[var(--mute)]"
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     event.preventDefault();
@@ -319,14 +324,14 @@ export default function CopilotWidget({
                 onClick={() => {
                   void sendMessage();
                 }}
-                className="rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-4 py-2 text-white"
+                className="rounded-lg bg-[var(--ink)] px-4 py-2 text-[var(--on-primary)] transition hover:opacity-90"
               >
                 ➤
               </button>
             </div>
           </div>
 
-          <div className="relative px-4 py-2 text-[10px] text-white/40">
+          <div className="relative border-t border-[var(--hairline)] bg-[var(--canvas-soft)] px-4 py-2 text-[10px] text-[var(--mute)]">
             AI responses may be incorrect. Verify important information.
           </div>
 
@@ -345,7 +350,7 @@ export default function CopilotWidget({
               background: linear-gradient(
                 90deg,
                 transparent,
-                rgba(255, 255, 255, 0.25),
+                rgba(161, 161, 161, 0.18),
                 transparent
               );
               animation: shimmer 1.2s infinite;
