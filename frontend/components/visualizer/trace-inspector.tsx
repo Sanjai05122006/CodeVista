@@ -16,9 +16,9 @@ type TraceInspectorProps = {
 };
 
 const kindStyles = {
-  primitive: "border-emerald-400/20 bg-emerald-500/10 text-emerald-200",
-  array: "border-sky-400/20 bg-sky-500/10 text-sky-200",
-  object: "border-amber-400/20 bg-amber-500/10 text-amber-200",
+  primitive: "border-white/10 bg-[#111827] text-slate-300",
+  array: "border-white/10 bg-[#111827] text-sky-300",
+  object: "border-white/10 bg-[#111827] text-amber-200",
 };
 
 export function TraceInspector({
@@ -34,7 +34,7 @@ export function TraceInspector({
   const variables = normalizeVariableEntries(currentStep?.variables);
 
   return (
-    <div className="flex min-h-0 flex-col rounded-xl border border-white/10 bg-[#0b1220] p-3">
+    <div className="flex h-full min-h-0 flex-col rounded-xl border border-white/10 bg-[#0b1220] p-3">
       <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#111827] p-1">
         <button
           type="button"
@@ -82,10 +82,10 @@ export function TraceInspector({
         </button>
       </div>
 
-      <div className="mt-3 min-h-0 flex-1 overflow-auto">
+      <div className="mt-3 min-h-0 flex-1">
         {activeTab === "stack" ? (
           currentStep?.call_stack?.length ? (
-            <div className="space-y-2">
+            <div className="h-full space-y-2 overflow-auto pr-1">
               {currentStep.call_stack.map((frame, index) => (
                 <div
                   key={`${frame}-${index}`}
@@ -103,7 +103,7 @@ export function TraceInspector({
         ) : null}
 
         {activeTab === "variables" ? (
-          <div>
+          <div className="flex h-full min-h-0 flex-col">
             <div className="mb-3 flex items-center justify-between">
               <p className="text-[11px] uppercase tracking-[0.16em] text-gray-500">
                 Variable State
@@ -115,15 +115,15 @@ export function TraceInspector({
               ) : null}
             </div>
 
-            <div className="space-y-2">
+            <div className="flex max-h-[280px] flex-col gap-2 overflow-auto rounded-2xl border border-white/10 bg-[#0b1220] p-3">
               {variables.length > 0 ? (
                 variables.map((entry) => (
                   <div
                     key={entry.key}
-                    className="rounded-md border border-white/10 bg-white/5 px-3 py-2"
+                    className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left transition hover:border-white/20 hover:bg-white/10"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="font-mono text-xs text-slate-100">
+                      <span className="font-mono text-xs text-indigo-200">
                         {entry.key}
                       </span>
                       <span
@@ -132,7 +132,7 @@ export function TraceInspector({
                         {entry.kind}
                       </span>
                     </div>
-                    <div className="mt-2 overflow-hidden rounded-md bg-[#020617] px-2 py-2 font-mono text-xs text-gray-300">
+                    <div className="mt-2 max-h-32 overflow-auto rounded-md bg-[#020617] px-2 py-2 font-mono text-xs text-slate-300">
                       {entry.value}
                     </div>
                   </div>
@@ -147,7 +147,7 @@ export function TraceInspector({
         ) : null}
 
         {activeTab === "source" ? (
-          <pre className="min-h-[260px] overflow-auto rounded-xl border border-white/10 bg-[#020617] p-4 font-mono text-xs text-gray-300">
+          <pre className="h-full min-h-0 overflow-auto rounded-xl border border-white/10 bg-[#020617] p-4 font-mono text-xs text-gray-300">
             <code>{sourceCode || "// No code snapshot available."}</code>
           </pre>
         ) : null}
