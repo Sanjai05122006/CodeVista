@@ -93,7 +93,7 @@ export const useChatPersistence = ({
   const schedule = useCallback(() => {
     clearScheduledFlush();
     timeout.current = window.setTimeout(() => {
-      void flush();
+      void flush().catch(() => false);
     }, SAVE_DEBOUNCE_MS);
   }, [clearScheduledFlush, flush]);
 
@@ -143,7 +143,7 @@ export const useChatPersistence = ({
     return () => {
       window.removeEventListener("pagehide", handlePageHide);
       clearScheduledFlush();
-      void flush();
+      void flush().catch(() => false);
     };
   }, [accessToken, clearScheduledFlush, flush, sessionId, threadId, title]);
 

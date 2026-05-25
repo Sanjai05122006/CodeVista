@@ -96,7 +96,7 @@ export default function CopilotWidget({
       if (timerRef.current !== null) {
         window.clearTimeout(timerRef.current);
       }
-      void flush();
+      void flush().catch(() => false);
     };
   }, [flush]);
 
@@ -107,6 +107,11 @@ export default function CopilotWidget({
     const trimmed = input.trim();
 
     if (!trimmed || loadingAI) {
+      return;
+    }
+
+    if (!accessToken) {
+      setError("Sign in is required to use the secured assistant.");
       return;
     }
 
@@ -190,10 +195,18 @@ export default function CopilotWidget({
         setStream("");
         setLoadingAI(false);
       }, Math.min(Math.max(formattedReply.length * 10, 600), 2200));
-    } catch {
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "CHAT_REQUEST_FAILED";
       setLoadingAI(false);
       setStream("");
-      setError("Unable to get a reply right now. Please try again.");
+      setError(
+        message.includes("AUTH_REQUIRED") ||
+          message.includes("MISSING_AUTH_TOKEN") ||
+          message.includes("INVALID_AUTH_TOKEN")
+          ? "Sign in is required to use the secured assistant."
+          : "Unable to get a reply right now. Please try again."
+      );
     }
   };
 

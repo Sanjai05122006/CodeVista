@@ -86,7 +86,9 @@ export function useSessionBuffer(accessToken: string | null) {
     }
 
     saveTimerRef.current = window.setTimeout(() => {
-      void flush();
+      void flush().catch(() => {
+        // Save errors are already reflected in hook state.
+      });
     }, SAVE_DEBOUNCE_MS);
   }, [accessToken, clearTimer, flush]);
 
