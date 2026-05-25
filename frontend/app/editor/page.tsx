@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { loader } from "@monaco-editor/react";
 import type * as Monaco from "monaco-editor";
 import { AnimatePresence, motion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -52,6 +53,21 @@ const Editor = dynamic(() => import("@monaco-editor/react"), {
   ssr: false,
 });
 
+let monacoLoaderPromise: Promise<void> | null = null;
+
+const ensureMonacoLoader = async () => {
+  if (!monacoLoaderPromise) {
+    monacoLoaderPromise = import("monaco-editor")
+      .then((monaco) => {
+        loader.config({ monaco });
+        return loader.init();
+      })
+      .then(() => undefined);
+  }
+
+  return monacoLoaderPromise;
+};
+
 function EditorWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -59,6 +75,8 @@ function EditorWorkspace() {
   const [code, setCode] = useState("console.log(2+3)");
   const [language, setLanguage] = useState("javascript");
   const [stdin, setStdin] = useState("");
+  const [monacoReady, setMonacoReady] = useState(false);
+  const [monacoError, setMonacoError] = useState<string | null>(null);
   const [result, setResult] = useState<ExecutionData | null>(null);
   const [analysis, setAnalysis] = useState<AnalysisData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -132,6 +150,33 @@ function EditorWorkspace() {
   );
 
   useEffect(() => {
+    let active = true;
+
+    void ensureMonacoLoader()
+      .then(() => {
+        if (!active) {
+          return;
+        }
+
+        setMonacoReady(true);
+        setMonacoError(null);
+      })
+      .catch((error) => {
+        if (!active) {
+          return;
+        }
+
+        setMonacoError(
+          error instanceof Error ? error.message : "Monaco failed to initialize."
+        );
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
     if (requestedSessionId && accessToken) {
       return;
     }
@@ -146,7 +191,9 @@ function EditorWorkspace() {
 
     return () => {
       window.clearTimeout(timer);
-      void flush();
+      void flush().catch(() => {
+        // Save errors are already surfaced through workspace state.
+      });
     };
   }, [accessToken, flush, requestedSessionId]);
 
@@ -289,6 +336,17 @@ function EditorWorkspace() {
   }, [accessToken, hydrateSession, requestedSessionId]);
 
   const runCode = async () => {
+    if (!accessToken) {
+      setExecutionError(
+        "Sign in is required to run code, generate analysis, and view traces in the secured workspace."
+      );
+      setAnalysisError(
+        "Sign in is required to use analysis and trace features."
+      );
+      setActiveTab("output");
+      return;
+    }
+
     try {
       setLoading(true);
       setAnalysisLoading(true);
@@ -298,7 +356,7 @@ function EditorWorkspace() {
       setAnalysis(null);
       setTraceSteps([]);
 
-      const workspace = await runWorkspace({ code, language, stdin });
+      const workspace = await runWorkspace({ code, language, stdin }, accessToken);
       const executionData = workspace.execution;
       const analysisData = workspace.analysis;
 
@@ -365,8 +423,20 @@ function EditorWorkspace() {
           nextSessionTitle
         );
       }
-    } catch {
-      setExecutionError("🌐 Network error. Please check your connection.");
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Request failed.";
+      const isAuthFailure =
+        message.includes("AUTH_REQUIRED") ||
+        message.includes("MISSING_AUTH_TOKEN") ||
+        message.includes("INVALID_AUTH_TOKEN") ||
+        message.toLowerCase().includes("sign in is required");
+
+      setExecutionError(
+        isAuthFailure
+          ? "Sign in is required to use execution, analysis, and trace in the secured workspace."
+          : "🌐 Network error. Please check your connection."
+      );
     } finally {
       setLoading(false);
       setAnalysisLoading(false);
@@ -454,23 +524,33 @@ function EditorWorkspace() {
               </div>
 
               <div className="flex-1 min-h-[320px] lg:min-h-0">
-                <Editor
-                  height="100%"
-                  language={language}
-                  value={code}
-                  theme="vs-dark"
-                  onChange={(v) => setCode(v || "")}
-                  onMount={(editor, monaco) => {
-                    editorRef.current = editor;
-                    monacoRef.current = monaco;
-                  }}
-                  options={{
-                    fontSize: 14,
-                    glyphMargin: true,
-                    minimap: { enabled: false },
-                    smoothScrolling: true,
-                  }}
-                />
+                {monacoError ? (
+                  <div className="flex h-full items-center justify-center border-t border-white/5 bg-[#08101d] px-6 text-center text-sm text-red-300">
+                    Monaco failed to initialize. {monacoError}
+                  </div>
+                ) : monacoReady ? (
+                  <Editor
+                    height="100%"
+                    language={language}
+                    value={code}
+                    theme="vs-dark"
+                    onChange={(v) => setCode(v || "")}
+                    onMount={(editor, monaco) => {
+                      editorRef.current = editor;
+                      monacoRef.current = monaco;
+                    }}
+                    options={{
+                      fontSize: 14,
+                      glyphMargin: true,
+                      minimap: { enabled: false },
+                      smoothScrolling: true,
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center border-t border-white/5 bg-[#08101d] text-sm text-gray-400">
+                    Loading editor...
+                  </div>
+                )}
               </div>
 
               <div className="border-t border-white/10 bg-[#0b1220] p-4">
@@ -650,7 +730,7 @@ function EditorWorkspace() {
 
       </div>
 
-      {chatThreadId ? (
+      {chatThreadId && accessToken ? (
         <ChatContainer
           threadId={chatThreadId}
           title={derivedTitle}

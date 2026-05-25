@@ -30,6 +30,16 @@ export type WorkspaceRunPayload = {
   stdin?: string;
 };
 
+export type ProductLanguage = {
+  id: number;
+  key: "javascript" | "python" | "cpp";
+  name: string;
+  execution_enabled: true;
+  analysis_enabled: true;
+  trace_mode: "full" | "fallback" | "none";
+  trace_description: string;
+};
+
 export type WorkspaceExecutionResult = {
   stdout?: string;
   stderr?: string;
@@ -270,11 +280,38 @@ export async function requestPasswordReset(email: string) {
   return data ?? { ok: true };
 }
 
-export async function runWorkspace(payload: WorkspaceRunPayload) {
+export async function fetchLanguages() {
+  const response = await fetch(buildApiUrl("/languages"), {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | ProductLanguage[]
+    | { error?: string; message?: string }
+    | null;
+
+  if (!response.ok) {
+    const failure = data as { error?: string; message?: string } | null;
+    throw new Error(
+      failure?.message || failure?.error || "Unable to load supported languages."
+    );
+  }
+
+  return data as ProductLanguage[];
+}
+
+export async function runWorkspace(
+  payload: WorkspaceRunPayload,
+  accessToken: string
+) {
   const response = await fetch(buildApiUrl("/workspace"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
     body: JSON.stringify(payload),
   });
