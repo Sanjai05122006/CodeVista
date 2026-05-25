@@ -1,4 +1,4 @@
-import { supabaseAdmin } from "../config/db";
+import { db, supabaseAdmin } from "../config/db";
 import { AppError } from "../middleware/error.middleware";
 
 /* =========================
@@ -171,9 +171,10 @@ const deriveTitleFromAiOutput = (
     }
   }
 
-  const firstStep = Array.isArray(ai?.algorithm_steps)
-    ? ai.algorithm_steps.find((step) => typeof step === "string" && step.trim().length > 0)
-    : null;
+  const normalizedAlgorithmSteps = normalizeStringArray(ai?.algorithm_steps);
+  const firstStep = normalizedAlgorithmSteps.find(
+    (step) => typeof step === "string" && step.trim().length > 0
+  );
 
   if (firstStep) {
     const cleaned = firstStep
@@ -190,6 +191,25 @@ const deriveTitleFromAiOutput = (
   return null;
 };
 
+const normalizeStringArray = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is string => typeof item === "string");
+  }
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
 /* =========================
    SAVE SESSION
 ========================= */
@@ -204,123 +224,136 @@ export const saveSession = async (
     executions[executions.length - 1]
   );
 
-  if (payload.sessionId) {
-    const { data: existingSession, error: existingSessionError } =
-      await supabaseAdmin
-        .from("sessions")
-        .select("id, user_id")
-        .eq("id", payload.sessionId)
-        .single();
+  const client = await db.connect();
 
-    if (existingSessionError || !existingSession) {
-      throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
-    }
+  try {
+    await client.query("BEGIN");
 
-    if (existingSession.user_id !== userId) {
-      throw new AppError("FORBIDDEN", 403, "SESSION_ACCESS_DENIED");
-    }
+    if (payload.sessionId) {
+      const existingSessionResult = await client.query<{
+        id: string;
+        user_id: string;
+      }>(
+        "select id, user_id from sessions where id = $1 for update",
+        [payload.sessionId]
+      );
 
-    sessionId = payload.sessionId;
-  }
+      const existingSession = existingSessionResult.rows[0];
 
-  const sessionPayload = {
-    id: sessionId,
-    user_id: userId,
-    title: payload.title?.trim() || fallbackTitle,
-    updated_at: new Date().toISOString(),
-  };
-
-  const { error: sessionError } = payload.sessionId
-    ? await supabaseAdmin
-        .from("sessions")
-        .update(sessionPayload)
-        .eq("id", sessionId)
-        .eq("user_id", userId)
-    : await supabaseAdmin.from("sessions").insert(sessionPayload);
-
-  if (sessionError) {
-    throw new AppError(
-      "SESSION_UPSERT_FAILED",
-      500,
-      `SESSION_UPSERT_FAILED: ${sessionError.message}`
-    );
-  }
-
-  // CLEAR OLD DATA (idempotent behavior)
-  await supabaseAdmin
-    .from("executions")
-    .delete()
-    .eq("session_id", sessionId);
-
-  // INSERT EXECUTIONS
-  const executionRows = executions.map((exec) => ({
-    session_id: sessionId,
-    code: exec.code,
-    language: exec.language,
-  }));
-
-  const { data: executionData, error: executionError } =
-    await supabaseAdmin
-      .from("executions")
-      .insert(executionRows)
-      .select();
-
-  if (executionError || !executionData) {
-    throw new AppError(
-      "EXECUTION_INSERT_FAILED",
-      500,
-      `EXECUTION_INSERT_FAILED: ${executionError?.message}`
-    );
-  }
-
-  // INSERT AI OUTPUTS + RESULTS
-  for (let i = 0; i < executionData.length; i++) {
-    const execRow = executionData[i];
-    const input = executions[i];
-
-    // AI OUTPUT
-    if (input.ai) {
-      const { error: aiInsertError } = await supabaseAdmin.from("ai_outputs").insert({
-        execution_id: execRow.id,
-        algorithm_name: input.ai.algorithmName?.trim() || null,
-        pseudocode: input.ai.pseudocode?.join("\n") ?? null,
-        algorithm_steps: input.ai.algorithmSteps ?? null,
-        time_complexity: input.ai.complexity?.time ?? null,
-        space_complexity: input.ai.complexity?.space ?? null,
-        explanation: input.ai.explanation ?? null,
-        execution_trace: input.ai.trace ?? null,
-      });
-
-      if (aiInsertError) {
-        throw new AppError(
-          "AI_OUTPUT_INSERT_FAILED",
-          500,
-          `AI_OUTPUT_INSERT_FAILED: ${aiInsertError.message}`
-        );
+      if (!existingSession) {
+        throw new AppError("SESSION_NOT_FOUND", 404, "SESSION_NOT_FOUND");
       }
+
+      if (existingSession.user_id !== userId) {
+        throw new AppError("FORBIDDEN", 403, "SESSION_ACCESS_DENIED");
+      }
+
+      sessionId = payload.sessionId;
     }
 
-    // EXECUTION RESULT
-    const { error: executionResultError } = await supabaseAdmin
-      .from("execution_results")
-      .insert({
-      execution_id: execRow.id,
-      stdout: input.output ?? null,
-      stderr: input.error ?? null,
-      runtime_ms: input.runtime ?? null,
-      memory_kb: input.memory ?? null,
-    });
+    const nextTitle = payload.title?.trim() || fallbackTitle;
 
-    if (executionResultError) {
-      throw new AppError(
-        "EXECUTION_RESULT_INSERT_FAILED",
-        500,
-        `EXECUTION_RESULT_INSERT_FAILED: ${executionResultError.message}`
+    if (payload.sessionId) {
+      await client.query(
+        `
+          update sessions
+          set title = $1,
+              updated_at = $2
+          where id = $3 and user_id = $4
+        `,
+        [nextTitle, new Date().toISOString(), sessionId, userId]
+      );
+    } else {
+      await client.query(
+        `
+          insert into sessions (id, user_id, title, updated_at)
+          values ($1, $2, $3, $4)
+        `,
+        [sessionId, userId, nextTitle, new Date().toISOString()]
       );
     }
-  }
 
-  return sessionId;
+    await client.query("delete from executions where session_id = $1", [sessionId]);
+
+    for (const input of executions) {
+      const executionId = crypto.randomUUID();
+
+      await client.query(
+        `
+          insert into executions (id, session_id, code, language)
+          values ($1, $2, $3, $4)
+        `,
+        [executionId, sessionId, input.code, input.language]
+      );
+
+      if (input.ai) {
+        await client.query(
+          `
+            insert into ai_outputs (
+              execution_id,
+              algorithm_name,
+              pseudocode,
+              algorithm_steps,
+              time_complexity,
+              space_complexity,
+              explanation,
+              execution_trace
+            )
+            values ($1, $2, $3, $4::jsonb, $5::jsonb, $6, $7, $8::jsonb)
+          `,
+          [
+            executionId,
+            input.ai.algorithmName?.trim() || null,
+            input.ai.pseudocode?.join("\n") ?? null,
+            JSON.stringify(input.ai.algorithmSteps ?? []),
+            input.ai.complexity?.time
+              ? JSON.stringify(input.ai.complexity.time)
+              : null,
+            input.ai.complexity?.space ?? null,
+            input.ai.explanation ?? null,
+            JSON.stringify(input.ai.trace ?? []),
+          ]
+        );
+      }
+
+      await client.query(
+        `
+          insert into execution_results (
+            execution_id,
+            stdout,
+            stderr,
+            runtime_ms,
+            memory_kb
+          )
+          values ($1, $2, $3, $4, $5)
+        `,
+        [
+          executionId,
+          input.output ?? null,
+          input.error ?? null,
+          input.runtime ?? null,
+          input.memory ?? null,
+        ]
+      );
+    }
+
+    await client.query("COMMIT");
+    return sessionId;
+  } catch (error) {
+    await client.query("ROLLBACK");
+
+    if (error instanceof AppError) {
+      throw error;
+    }
+
+    throw new AppError(
+      "SESSION_SAVE_FAILED",
+      500,
+      error instanceof Error ? error.message : "SESSION_SAVE_FAILED"
+    );
+  } finally {
+    client.release();
+  }
 };
 
 /* =========================
@@ -533,9 +566,7 @@ export const getSessionDetail = async (
                   .map((line) => line.trim())
                   .filter(Boolean)
               : [],
-            algorithm_steps: Array.isArray(ai.algorithm_steps)
-              ? ai.algorithm_steps
-              : [],
+            algorithm_steps: normalizeStringArray(ai.algorithm_steps),
             time_complexity: ai.time_complexity ?? {
               best: "",
               average: "",

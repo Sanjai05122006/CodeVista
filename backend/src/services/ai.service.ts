@@ -381,6 +381,13 @@ const ensureExecutionTrace = (
   _language: string,
   trace: TraceStep[]
 ): AnalysisResponse => {
+  if (trace.length === 0) {
+    return {
+      ...result,
+      execution_trace: [],
+    };
+  }
+
   if (Array.isArray(result.execution_trace) && result.execution_trace.length > 0) {
     return result;
   }
