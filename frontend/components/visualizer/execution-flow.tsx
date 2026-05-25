@@ -72,7 +72,7 @@ export function ExecutionFlow({
   if (traceSteps.length === 0) {
     return (
       <div className="flex h-full min-h-[420px] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[#0b1220] text-sm text-gray-500">
-        Run JavaScript code to generate an execution graph.
+        Run code from the editor to generate a trace graph when trace data is available.
       </div>
     );
   }
