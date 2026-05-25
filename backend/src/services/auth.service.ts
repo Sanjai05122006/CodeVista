@@ -19,11 +19,10 @@ export const sendPasswordResetEmail = async (email: string) => {
   const account = await findUserByEmail(email);
 
   if (!account) {
-    throw new AppError(
-      "PASSWORD_RESET_USER_NOT_FOUND",
-      404,
-      "No account was found with that email address."
-    );
+    logger.info("auth.password_reset.requested_for_unknown_email", {
+      email,
+    });
+    return;
   }
 
   const redirectTo = `${env.FRONTEND_URL.replace(/\/+$/, "")}${PASSWORD_RESET_REDIRECT_PATH}`;

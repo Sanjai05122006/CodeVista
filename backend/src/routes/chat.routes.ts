@@ -4,8 +4,12 @@ import {
   getThreadMessages,
   saveBatch,
 } from "../controllers/chat.controller";
-import { authMiddleware } from "../middleware/auth.middleware";
+import {
+  authMiddleware,
+  requireAuthenticatedAccess,
+} from "../middleware/auth.middleware";
 import { optionalAuthMiddleware } from "../middleware/optional-auth.middleware";
+import { env } from "../config/env";
 import {
   expensiveEndpointRateLimits,
   validateChatBatchRequest,
@@ -17,6 +21,7 @@ const router = Router();
 router.post(
   "/",
   optionalAuthMiddleware,
+  ...(env.ALLOW_ANONYMOUS_CHAT ? [] : [requireAuthenticatedAccess]),
   expensiveEndpointRateLimits.chat,
   validateChatRequest,
   chat

@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { runAnalysis } from "../controllers/analysis.controller";
+import {
+  requireAuthenticatedAccess,
+} from "../middleware/auth.middleware";
 import { optionalAuthMiddleware } from "../middleware/optional-auth.middleware";
+import { env } from "../config/env";
 import {
   expensiveEndpointRateLimits,
   validateAnalysisRequest,
@@ -9,6 +13,9 @@ import {
 const router = Router();
 
 router.use(optionalAuthMiddleware);
+if (!env.ALLOW_ANONYMOUS_ANALYSIS) {
+  router.use(requireAuthenticatedAccess);
+}
 router.post(
   "/",
   expensiveEndpointRateLimits.analysis,

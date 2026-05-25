@@ -1,4 +1,5 @@
 import { TraceStep } from "../../types/analysis";
+import { env } from "../../config/env";
 import { buildFallbackTrace } from "./fallback-tracer.service";
 import { traceJavascriptExecution } from "./javascript-tracer.service";
 import { tracePythonExecution } from "./python-tracer.service";
@@ -9,6 +10,10 @@ export const generateExecutionTrace = async (
   stdin: string = ""
 ): Promise<TraceStep[]> => {
   if (language === "javascript") {
+    if (!env.ALLOW_UNSAFE_JS_TRACING) {
+      return [];
+    }
+
     return traceJavascriptExecution(code);
   }
 

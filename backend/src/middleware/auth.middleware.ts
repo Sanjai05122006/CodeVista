@@ -46,3 +46,18 @@ export const authMiddleware = async (
     return res.status(401).json({ error: "INVALID_AUTH_TOKEN" });
   }
 };
+
+export const requireAuthenticatedAccess = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (!req.user?.id) {
+    return res.status(401).json({
+      error: "AUTH_REQUIRED",
+      message: "Sign in is required to access this endpoint.",
+    });
+  }
+
+  return next();
+};
