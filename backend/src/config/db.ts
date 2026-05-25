@@ -4,6 +4,27 @@ import { createClient } from "@supabase/supabase-js";
 import { env } from "./env";
 import { logger } from "../utils/logger";
 
+const buildPgConnectionString = (databaseUrl: string) => {
+  const shouldManageSslInCode =
+    databaseUrl.includes("supabase.co") ||
+    databaseUrl.includes("supabase.com") ||
+    /sslmode=/i.test(databaseUrl);
+
+  if (!shouldManageSslInCode) {
+    return databaseUrl;
+  }
+
+  const parsed = new URL(databaseUrl);
+  parsed.searchParams.delete("sslmode");
+  parsed.searchParams.delete("sslcert");
+  parsed.searchParams.delete("sslkey");
+  parsed.searchParams.delete("sslrootcert");
+
+  return parsed.toString();
+};
+
+const pgConnectionString = buildPgConnectionString(env.DATABASE_URL);
+
 const lookupWithDnsFallback = (
   hostname: string,
   options: any,
@@ -39,12 +60,12 @@ const lookupWithDnsFallback = (
 };
 
 export const db = new Pool({
-  connectionString: env.DATABASE_URL,
+  connectionString: pgConnectionString,
   ssl:
     env.DATABASE_URL.includes("supabase.co") ||
     env.DATABASE_URL.includes("supabase.com") ||
     /sslmode=require/i.test(env.DATABASE_URL)
-      ? { rejectUnauthorized: false }
+      ? { rejectUnauthorized: env.PG_SSL_REJECT_UNAUTHORIZED }
       : undefined,
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,

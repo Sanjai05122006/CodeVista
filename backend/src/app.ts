@@ -20,7 +20,6 @@ const apiRouter = express.Router();
 app.set("trust proxy", 1);
 app.use(
   helmet({
-    contentSecurityPolicy: false,
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -42,6 +41,14 @@ app.use((req, res, next) => {
 });
 app.use(express.json({ limit: MAX_JSON_BODY_SIZE }));
 
+const buildHealthPayload = () => ({
+  status: "ok" as const,
+  service: "backend" as const,
+  version: "0.1.0",
+  uptime_seconds: Math.round(process.uptime()),
+  timestamp: new Date().toISOString(),
+});
+
 app.get("/", (req, res) => {
   res.json({
     status: "running",
@@ -51,6 +58,7 @@ app.get("/", (req, res) => {
       "POST /api/analysis",
       "POST /api/workspace",
       "GET /api/languages",
+      "GET /api/uptime",
       "POST /api/session/save",
       "GET /api/session/history",
       "POST /api/chat",
@@ -58,6 +66,18 @@ app.get("/", (req, res) => {
       "POST /api/auth/password/reset/request",
     ],
   });
+});
+
+app.get("/healthz", (_req, res) => {
+  res.status(200).json(buildHealthPayload());
+});
+
+apiRouter.get("/uptime", (_req, res) => {
+  res.status(200).json(buildHealthPayload());
+});
+
+apiRouter.get("/healthz", (_req, res) => {
+  res.status(200).json(buildHealthPayload());
 });
 
 apiRouter.use("/execution", executionRoutes);
