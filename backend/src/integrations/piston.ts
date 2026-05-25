@@ -3,6 +3,10 @@ import { env } from "../config/env";
 import { logger } from "../utils/logger";
 
 const PISTON_BASE_URL = env.PISTON_BASE_URL;
+const PISTON_COMPILE_TIMEOUT_MS = 10000;
+const PISTON_RUN_TIMEOUT_MS = 3000;
+const PISTON_COMPILE_MEMORY_LIMIT_BYTES = 268435456;
+const PISTON_RUN_MEMORY_LIMIT_BYTES = 134217728;
 
 const pistonLanguageMap: Record<string, string> = {
   javascript: "javascript",
@@ -29,6 +33,10 @@ export const executePiston = async (
         version: "*",
         files: [{ name: "main", content: code }],
         stdin,
+        compile_timeout: PISTON_COMPILE_TIMEOUT_MS,
+        run_timeout: PISTON_RUN_TIMEOUT_MS,
+        compile_memory_limit: PISTON_COMPILE_MEMORY_LIMIT_BYTES,
+        run_memory_limit: PISTON_RUN_MEMORY_LIMIT_BYTES,
       },
       {
         timeout: 10000,

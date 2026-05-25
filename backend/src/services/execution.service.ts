@@ -3,6 +3,9 @@ import { executePiston } from "../integrations/piston";
 import { cacheService } from "./cache.service";
 import { logger } from "../utils/logger";
 
+const MAX_OUTPUT_LENGTH = 8000;
+const TRUNCATION_SUFFIX = "\n\n[output truncated by CodeVista]";
+
 export const executeCode = (
   code: string,
   language: string,
@@ -25,10 +28,10 @@ const executeCodeInternal = async (
       cache_key: cacheKey,
       language,
     });
-    return {
+    return applyOutputGuards({
       ...cached,
       source: "cache",
-    };
+    }, language, "cache");
   }
 
   logger.info("execution.cache.miss", {
@@ -112,6 +115,8 @@ const executeCodeInternal = async (
     }
   }
 
+  result = applyOutputGuards(result, language, result.source || "unknown");
+
   // ✅ Cache only successful results
   cacheService.set(cacheKey, result, 60);
   logger.info("execution.cache.set", {
@@ -145,5 +150,43 @@ function formatPistonResponse(pistonResult: any) {
     runtime_ms: Math.round((Number(run.time) || 0) * 1000),
     memory_kb: Math.round((Number(run.memory) || 0) / 1024),
     status: run.code === 0 ? "Accepted" : "Runtime Error",
+  };
+}
+
+function trimOutput(value: string) {
+  if (value.length <= MAX_OUTPUT_LENGTH) {
+    return value;
+  }
+
+  return (
+    value.slice(0, Math.max(0, MAX_OUTPUT_LENGTH - TRUNCATION_SUFFIX.length)) +
+    TRUNCATION_SUFFIX
+  );
+}
+
+function applyOutputGuards<
+  T extends {
+    [key: string]: unknown;
+    stdout?: string;
+    stderr?: string;
+  },
+>(result: T, language: string, source: string): T {
+  const stdout = trimOutput(result.stdout || "");
+  const stderr = trimOutput(result.stderr || "");
+
+  if (stdout !== (result.stdout || "") || stderr !== (result.stderr || "")) {
+    logger.warn("execution.output.truncated", {
+      language,
+      source,
+      stdout_length: (result.stdout || "").length,
+      stderr_length: (result.stderr || "").length,
+      max_output_length: MAX_OUTPUT_LENGTH,
+    });
+  }
+
+  return {
+    ...result,
+    stdout,
+    stderr,
   };
 }

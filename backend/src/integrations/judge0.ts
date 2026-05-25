@@ -3,6 +3,11 @@ import { env } from "../config/env";
 import { logger } from "../utils/logger";
 
 const BASE_URL = env.JUDGE0_BASE_URL;
+const JUDGE0_CPU_TIME_LIMIT_SECONDS = 3;
+const JUDGE0_WALL_TIME_LIMIT_SECONDS = 5;
+const JUDGE0_MEMORY_LIMIT_KB = 131072;
+const JUDGE0_STACK_LIMIT_KB = 65536;
+const JUDGE0_MAX_FILE_SIZE_KB = 1024;
 
 //Language mapping
 const languageMap: Record<string, number> = {
@@ -29,6 +34,12 @@ export const executeJudge0 = async (
         source_code: code,
         language_id,
         stdin,
+        cpu_time_limit: JUDGE0_CPU_TIME_LIMIT_SECONDS,
+        wall_time_limit: JUDGE0_WALL_TIME_LIMIT_SECONDS,
+        memory_limit: JUDGE0_MEMORY_LIMIT_KB,
+        stack_limit: JUDGE0_STACK_LIMIT_KB,
+        max_file_size: JUDGE0_MAX_FILE_SIZE_KB,
+        number_of_runs: 1,
       },
       {
         headers: {
