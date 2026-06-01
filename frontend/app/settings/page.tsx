@@ -7,7 +7,8 @@ import { ArrowRight, History, Mail, Shield, UserRound } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PublicPageFrame } from "@/components/layout/public-page-frame";
 
-const supportEmail = "sanjai05126@gmail.com";
+const supportEmail =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "sanjai05126@gmail.com";
 
 const utilityCards = [
   {

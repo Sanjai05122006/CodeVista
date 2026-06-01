@@ -1,7 +1,12 @@
 import Link from "next/link";
-import { Code2 } from "lucide-react";
+import { Code2, Mail } from "lucide-react";
 
 const currentYear = new Date().getFullYear();
+const githubUrl =
+  process.env.NEXT_PUBLIC_GITHUB_URL?.trim() ||
+  "https://github.com/Sanjai05122006";
+const supportEmail =
+  process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "sanjai05126@gmail.com";
 
 type LandingFooterProps = {
   variant?: "legacy" | "landing";
@@ -28,8 +33,8 @@ const footerLinks = [
     title: "Support",
     items: [
       { href: "/contact", label: "Contact" },
-      { href: process.env.NEXT_PUBLIC_GITHUB_URL?.trim() || "https://github.com", label: "Repository" },
-      { href: "mailto:" + (process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "support@example.com"), label: "Support email" },
+      { href: githubUrl, label: "GitHub" },
+      { href: `mailto:${supportEmail}`, label: "Support email" },
     ],
   },
 ];
@@ -107,19 +112,19 @@ export function LandingFooter({
 
         <div className="flex items-center gap-3">
           <SocialLink
-            href="https://github.com"
+            href={githubUrl}
             label="GitHub"
             icon={<GitHubIcon />}
           />
           <SocialLink
-            href="https://twitter.com"
-            label="Twitter"
-            icon={<TwitterIcon />}
+            href="https://x.com"
+            label="X"
+            icon={<XIcon />}
           />
           <SocialLink
-            href="https://instagram.com"
-            label="Instagram"
-            icon={<InstagramIcon />}
+            href={`mailto:${supportEmail}`}
+            label="Email"
+            icon={<Mail size={18} />}
           />
         </div>
       </div>
@@ -162,11 +167,13 @@ function SocialLink({
   label: string;
   icon: React.ReactNode;
 }) {
+  const isHttp = href.startsWith("http");
+
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noreferrer"
+      target={isHttp ? "_blank" : undefined}
+      rel={isHttp ? "noreferrer" : undefined}
       aria-label={label}
       className="flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--canvas)] text-[var(--body)] transition hover:bg-[var(--canvas-soft)] hover:text-[var(--ink)]"
     >
@@ -187,26 +194,14 @@ function GitHubIcon() {
   );
 }
 
-function TwitterIcon() {
+function XIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
       className="h-[18px] w-[18px] fill-current"
       aria-hidden="true"
     >
-      <path d="M18.9 2H22l-6.77 7.74L23.2 22h-6.25l-4.9-6.4L6.46 22H3.35l7.24-8.28L1 2h6.4l4.43 5.86L18.9 2Zm-1.1 18h1.73L6.47 3.9H4.61L17.8 20Z" />
-    </svg>
-  );
-}
-
-function InstagramIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-[18px] w-[18px] fill-current"
-      aria-hidden="true"
-    >
-      <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2Zm0 1.8A3.95 3.95 0 0 0 3.8 7.75v8.5a3.95 3.95 0 0 0 3.95 3.95h8.5a3.95 3.95 0 0 0 3.95-3.95v-8.5a3.95 3.95 0 0 0-3.95-3.95h-8.5ZM17.7 5.15a1.15 1.15 0 1 1 0 2.3 1.15 1.15 0 0 1 0-2.3ZM12 6.6A5.4 5.4 0 1 1 6.6 12 5.4 5.4 0 0 1 12 6.6Zm0 1.8A3.6 3.6 0 1 0 15.6 12 3.6 3.6 0 0 0 12 8.4Z" />
+      <path d="M4.2 4h4.15l4.32 5.8L17.48 4H21l-6.55 8.26L21.8 20h-4.14l-4.73-6.34L7.98 20H4.46l6.93-8.75L4.2 4Zm12.82 14h1.2L7.32 5.83H6.1L17.02 18Z" />
     </svg>
   );
 }
