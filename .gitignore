@@ -4,6 +4,8 @@
 .env
 .env.local
 .env.*.local
+frontend/prod-frontend.env
+backend/prod-backend.env
 
 # =========================
 # NODE MODULES
