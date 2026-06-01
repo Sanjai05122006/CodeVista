@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle2, Mail } from "lucide-react";
+import { Mail } from "lucide-react";
 import { PublicPageFrame } from "@/components/layout/public-page-frame";
+import { StatusCard } from "@/components/ui/StatusCard";
 
 const supportEmail =
   process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "sanjai05126@gmail.com";
@@ -69,19 +70,19 @@ export default function ContactPage() {
             </div>
 
             {draftReady && mailtoHref ? (
-              <div className="mt-10 rounded-2xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-6 text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ink)] text-[var(--on-primary)]">
-                  <CheckCircle2 size={20} />
-                </div>
-                <h2 className="font-display mt-4 text-2xl font-semibold tracking-[-0.72px] text-[var(--ink)]">
-                  Your message is ready.
-                </h2>
-                <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--body)]">
-                  We prepared your support email for {supportEmail}. Open your
-                  email app, review the draft, and send it when you are ready.
-                </p>
-
-                <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-10">
+                <StatusCard
+                  tone="success"
+                  title="Your message is ready."
+                  message={
+                    <span>
+                      We prepared your support email for {supportEmail}. Open
+                      your email app, review the draft, and send it when you
+                      are ready.
+                    </span>
+                  }
+                  action={
+                    <div className="flex flex-wrap items-center justify-center gap-3">
                   <a
                     href={mailtoHref}
                     className="inline-flex h-12 items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
@@ -95,7 +96,9 @@ export default function ContactPage() {
                   >
                     Edit message
                   </button>
-                </div>
+                    </div>
+                  }
+                />
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="mt-10 grid gap-5">
@@ -131,9 +134,12 @@ export default function ContactPage() {
                 </Field>
 
                 {showValidation && !canSubmit ? (
-                  <p className="text-sm text-red-600">
-                    Fill in your name, email, and message before submitting.
-                  </p>
+                  <StatusCard
+                    tone="error"
+                    compact
+                    title="Missing information"
+                    message="Fill in your name, email, and message before submitting."
+                  />
                 ) : null}
 
                 <p className="text-sm text-[var(--body)]">

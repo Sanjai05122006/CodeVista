@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, Lock } from "lucide-react";
+import { ArrowLeft, Lock } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { supabase } from "@/lib/supabaseClient";
+import { StatusCard } from "@/components/ui/StatusCard";
 
 const passwordRequirements = [
   {
@@ -132,31 +133,40 @@ export default function ResetPasswordPage() {
         </div>
 
         {loading ? (
-          <div className="mt-8 rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-5 text-sm text-[var(--body)]">
-            Verifying your reset link...
+          <div className="mt-8">
+            <StatusCard
+              tone="info"
+              title="Verifying your reset link..."
+              message="We are checking that the password reset link is still valid."
+            />
           </div>
         ) : !canShowForm ? (
-          <div className="mt-8 rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-5 text-sm text-[var(--body)]">
-            This reset link is invalid or has expired. Request a new password
-            reset link to continue.
+          <div className="mt-8">
+            <StatusCard
+              tone="warning"
+              title="Reset link expired"
+              message="This reset link is invalid or has expired. Request a new password reset link to continue."
+            />
           </div>
         ) : message ? (
-          <div className="mt-8 rounded-2xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ink)] text-[var(--on-primary)]">
-              <CheckCircle2 size={20} />
-            </div>
-            <h2 className="font-display mt-4 text-2xl font-semibold tracking-[-0.72px] text-[var(--ink)]">
-              Password updated.
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--body)]">
-              {message} You will be redirected to sign in shortly.
-            </p>
-            <Link
-              href="/login"
-              className="mt-6 inline-flex h-12 items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
-            >
-              Go to sign in now
-            </Link>
+          <div className="mt-8">
+            <StatusCard
+              tone="success"
+              title="Password updated."
+              message={
+                <span>
+                  {message} You will be redirected to sign in shortly.
+                </span>
+              }
+              action={
+                <Link
+                  href="/login"
+                  className="inline-flex h-12 items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-semibold text-[var(--on-primary)] transition hover:opacity-90"
+                >
+                  Go to sign in now
+                </Link>
+              }
+            />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
@@ -203,7 +213,14 @@ export default function ResetPasswordPage() {
               })}
             </div>
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? (
+              <StatusCard
+                tone="error"
+                compact
+                title="Unable to update password"
+                message={error}
+              />
+            ) : null}
 
             <button
               type="submit"

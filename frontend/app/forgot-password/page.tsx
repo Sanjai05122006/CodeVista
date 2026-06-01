@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 import { requestPasswordReset } from "@/lib/api";
+import { StatusCard } from "@/components/ui/StatusCard";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -67,16 +68,16 @@ export default function ForgotPasswordPage() {
         </div>
 
         {message ? (
-          <div className="mt-8 rounded-2xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-6 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ink)] text-[var(--on-primary)]">
-              <CheckCircle2 size={20} />
-            </div>
-            <h2 className="font-display mt-4 text-2xl font-semibold tracking-[-0.72px] text-[var(--ink)]">
-              Reset link sent.
-            </h2>
-            <p className="mx-auto mt-3 max-w-lg text-sm leading-7 text-[var(--body)]">
-              {message} Check your inbox and open the link to continue.
-            </p>
+          <div className="mt-8">
+            <StatusCard
+              tone="success"
+              title="Reset link sent."
+              message={
+                <span>
+                  {message} Check your inbox and open the link to continue.
+                </span>
+              }
+            />
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="mt-8 grid gap-5">
@@ -94,7 +95,14 @@ export default function ForgotPasswordPage() {
               />
             </label>
 
-            {error ? <p className="text-sm text-red-600">{error}</p> : null}
+            {error ? (
+              <StatusCard
+                tone="error"
+                compact
+                title="Unable to continue"
+                message={error}
+              />
+            ) : null}
 
             <button
               type="submit"

@@ -14,6 +14,18 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth-context";
+import { StatusCard } from "@/components/ui/StatusCard";
+
+type RegisterFeedback = {
+  tone: "success" | "error";
+  title: string;
+  message: string;
+};
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 
 const passwordRequirements = [
   {
@@ -43,6 +55,7 @@ export default function RegisterPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<RegisterFeedback | null>(null);
 
   useEffect(() => {
     if (!loading && session) {
@@ -52,67 +65,102 @@ export default function RegisterPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setFeedback(null);
 
     if (!fullName || !email || !password || !confirmPassword) {
-      window.alert("All fields are required.");
+      setFeedback({
+        tone: "error",
+        title: "Missing details",
+        message: "All fields are required.",
+      });
       return;
     }
 
     if (password !== confirmPassword) {
-      window.alert("Passwords do not match.");
+      setFeedback({
+        tone: "error",
+        title: "Passwords do not match",
+        message: "Please enter the same password in both fields.",
+      });
       return;
     }
 
     if (!passwordRequirements.every((requirement) => requirement.test(password))) {
-      window.alert(
-        "Password must be at least 8 characters and include an uppercase letter, a number, and a special character."
-      );
+      setFeedback({
+        tone: "error",
+        title: "Password needs more strength",
+        message:
+          "Use at least 8 characters, including an uppercase letter, a number, and a special character.",
+      });
       return;
     }
 
     if (!agreedToTerms) {
-      window.alert("You need to accept the terms to continue.");
+      setFeedback({
+        tone: "error",
+        title: "Terms not accepted",
+        message: "Accept the terms to continue.",
+      });
       return;
     }
 
     setSubmitting(true);
 
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          display_name: fullName,
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            display_name: fullName,
+          },
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+      });
 
-    setSubmitting(false);
+      if (error) {
+        setFeedback({
+          tone: "error",
+          title: "Registration failed",
+          message: error.message,
+        });
+        return;
+      }
 
-    if (error) {
-      window.alert(error.message);
-      return;
+      setFeedback({
+        tone: "success",
+        title: "Account created",
+        message:
+          "Check your email if confirmation is required. Redirecting you to sign in.",
+      });
+      await delay(1500);
+      router.replace("/login");
+    } finally {
+      setSubmitting(false);
     }
-
-    window.alert("Account created. Check your email if confirmation is required.");
-    router.replace("/login");
   };
 
   const handleGoogleSignup = async () => {
     setSubmitting(true);
+    setFeedback(null);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    setSubmitting(false);
-
-    if (error) {
-      window.alert(error.message);
+      if (error) {
+        setFeedback({
+          tone: "error",
+          title: "Google sign-up failed",
+          message: error.message,
+        });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -134,7 +182,7 @@ export default function RegisterPage() {
         </Link>
 
         <div className="max-w-xl pt-16">
-          <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+          <p className="font-display inline-flex items-center rounded-full border border-[var(--hairline)] bg-white/75 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--ink)]">
             Create an account
           </p>
           <h1 className="font-display mt-5 text-[48px] font-semibold tracking-[-2.4px] text-[var(--ink)]">
@@ -181,7 +229,9 @@ export default function RegisterPage() {
             </div>
           </Link>
 
-          <p className="font-mono-ui text-[12px] text-[var(--mute)]">Register</p>
+          <p className="font-display inline-flex items-center rounded-full border border-[var(--hairline)] bg-white px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--ink)]">
+            Register
+          </p>
           <h2 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
             Create your workspace.
           </h2>
@@ -258,11 +308,22 @@ export default function RegisterPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
+              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-[15px] font-semibold text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
             >
               Create account
             </button>
           </form>
+
+          {feedback ? (
+            <div className="mt-6">
+              <StatusCard
+                tone={feedback.tone}
+                title={feedback.title}
+                message={feedback.message}
+                compact
+              />
+            </div>
+          ) : null}
 
           <div className="my-6 flex items-center gap-4 text-sm text-[var(--mute)]">
             <div className="h-px flex-1 bg-[var(--hairline)]" />
@@ -274,7 +335,7 @@ export default function RegisterPage() {
             type="button"
             onClick={handleGoogleSignup}
             disabled={submitting}
-            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
+            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
           >
             <Image src="/google.svg" alt="" width={18} height={18} />
             Continue with Google

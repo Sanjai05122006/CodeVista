@@ -7,6 +7,18 @@ import { useRouter } from "next/navigation";
 import { Code2, Lock, Mail } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "@/lib/auth-context";
+import { StatusCard } from "@/components/ui/StatusCard";
+
+type LoginFeedback = {
+  tone: "success" | "error";
+  title: string;
+  message: string;
+};
+
+const delay = (ms: number) =>
+  new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,6 +26,7 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<LoginFeedback | null>(null);
 
   useEffect(() => {
     if (!loading && session) {
@@ -23,43 +36,67 @@ export default function LoginPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setFeedback(null);
 
     if (!email || !password) {
-      window.alert("Email and password are required.");
+      setFeedback({
+        tone: "error",
+        title: "Missing credentials",
+        message: "Email and password are required.",
+      });
       return;
     }
 
     setSubmitting(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setSubmitting(false);
+      if (error) {
+        setFeedback({
+          tone: "error",
+          title: "Sign in failed",
+          message: error.message,
+        });
+        return;
+      }
 
-    if (error) {
-      window.alert(error.message);
-      return;
+      setFeedback({
+        tone: "success",
+        title: "Signed in successfully",
+        message: "Taking you back to the workspace now.",
+      });
+      await delay(900);
+      router.replace("/");
+    } finally {
+      setSubmitting(false);
     }
-
-    router.replace("/");
   };
 
   const handleGoogleLogin = async () => {
     setSubmitting(true);
+    setFeedback(null);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
 
-    setSubmitting(false);
-
-    if (error) {
-      window.alert(error.message);
+      if (error) {
+        setFeedback({
+          tone: "error",
+          title: "Google sign-in failed",
+          message: error.message,
+        });
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -81,7 +118,7 @@ export default function LoginPage() {
         </Link>
 
         <div className="max-w-xl pt-16">
-          <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+          <p className="font-display inline-flex items-center rounded-full border border-[var(--hairline)] bg-white/75 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--ink)]">
             Welcome back
           </p>
           <h1 className="font-display mt-5 text-[48px] font-semibold tracking-[-2.4px] text-[var(--ink)]">
@@ -110,7 +147,9 @@ export default function LoginPage() {
             </div>
           </Link>
 
-          <p className="font-mono-ui text-[12px] text-[var(--mute)]">Sign in</p>
+          <p className="font-display inline-flex items-center rounded-full border border-[var(--hairline)] bg-white px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--ink)]">
+            Sign in
+          </p>
           <h2 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
             Access your workspace.
           </h2>
@@ -157,11 +196,22 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
+              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-[15px] font-semibold text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
             >
               Sign in
             </button>
           </form>
+
+          {feedback ? (
+            <div className="mt-6">
+              <StatusCard
+                tone={feedback.tone}
+                title={feedback.title}
+                message={feedback.message}
+                compact
+              />
+            </div>
+          ) : null}
 
           <div className="my-6 flex items-center gap-4 text-sm text-[var(--mute)]">
             <div className="h-px flex-1 bg-[var(--hairline)]" />
@@ -173,7 +223,7 @@ export default function LoginPage() {
             type="button"
             onClick={handleGoogleLogin}
             disabled={submitting}
-            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
+            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
           >
             <Image src="/google.svg" alt="" width={18} height={18} />
             Continue with Google
