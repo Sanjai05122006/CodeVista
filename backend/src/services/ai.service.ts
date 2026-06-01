@@ -415,8 +415,8 @@ const ANALYSIS_PROVIDERS: Array<{
   name: ProviderName;
   provider: AnalysisProvider;
 }> = [
-  { name: "gemini", provider: generateGeminiAnalysis },
   { name: "groq", provider: generateGroqAnalysis },
+  { name: "gemini", provider: generateGeminiAnalysis },
 ];
 
 const callProviderWithRateLimit = async (
@@ -488,9 +488,10 @@ export const analyzeCode = async (
   const providers = dependencies.providers
     ? dependencies.providers
     : dependencies.provider
-    ? [{ name: "gemini" as const, provider: dependencies.provider }]
+    ? [{ name: "groq" as const, provider: dependencies.provider }]
     : ANALYSIS_PROVIDERS;
   const executionTrace = await generateExecutionTrace(code, language, stdin);
+  const primaryProviderName = providers[0]?.name ?? "groq";
 
   const localCached = getLocalCache(cacheKey);
   if (localCached) {
@@ -662,7 +663,7 @@ export const analyzeCode = async (
 
   return {
     ...fallbackResponse,
-    source: "gemini",
+    source: primaryProviderName,
   };
 };
 
@@ -678,6 +679,22 @@ type GenerateChatReplyInput = {
 };
 
 const CHAT_PROVIDER_MAX_RETRIES = 3;
+const GROQ_CHAT_MODEL = "llama-3.1-8b-instant";
+const GEMINI_CHAT_MODEL = "gemini-2.5-flash";
+
+type ChatProviderName = "groq" | "gemini";
+
+type ChatProviderConfig = {
+  name: ChatProviderName;
+  model: string;
+  provider: AnalysisProvider;
+};
+
+type ChatProviderResult = {
+  reply: string;
+  provider: ChatProviderName;
+  model: string;
+};
 
 const normalizeChatHistory = (history: unknown): ChatHistoryMessage[] => {
   if (!Array.isArray(history)) {
@@ -794,17 +811,20 @@ const isImmediateFallbackChatError = (error: AIServiceError) => {
   return false;
 };
 
-const generateGeminiChatReply = async (prompt: string) => {
+const callChatProviderWithRetry = async (
+  providerConfig: ChatProviderConfig,
+  prompt: string
+): Promise<ChatProviderResult> => {
   let lastError: AIServiceError | null = null;
 
   for (let attempt = 0; attempt < CHAT_PROVIDER_MAX_RETRIES; attempt += 1) {
     try {
-      const reply = await generateGeminiAnalysis(prompt);
+      const reply = await providerConfig.provider(prompt);
 
       return {
         reply,
-        provider: "gemini" as const,
-        model: "gemini-2.5-flash",
+        provider: providerConfig.name,
+        model: providerConfig.model,
       };
     } catch (error) {
       const serviceError =
@@ -812,13 +832,15 @@ const generateGeminiChatReply = async (prompt: string) => {
           ? error
           : new AIServiceError(
               "AI_PROVIDER_ERROR",
-              error instanceof Error ? error.message : "Unknown Gemini failure"
+              error instanceof Error
+                ? error.message
+                : `Unknown ${providerConfig.name} failure`
             );
 
       lastError = serviceError;
 
       if (isImmediateFallbackChatError(serviceError)) {
-        logger.warn("chat.gemini.fallback_immediate", {
+        logger.warn(`chat.${providerConfig.name}.fallback_immediate`, {
           reason: serviceError.code,
           status: serviceError.status,
           message: serviceError.message,
@@ -831,7 +853,7 @@ const generateGeminiChatReply = async (prompt: string) => {
         attempt < CHAT_PROVIDER_MAX_RETRIES - 1
       ) {
         const delay = 500 * 2 ** attempt;
-        logger.warn("chat.gemini.retry", {
+        logger.warn(`chat.${providerConfig.name}.retry`, {
           attempt: attempt + 1,
           delay,
           reason: serviceError.code,
@@ -841,7 +863,7 @@ const generateGeminiChatReply = async (prompt: string) => {
         continue;
       }
 
-      logger.warn("chat.gemini.fallback", {
+      logger.warn(`chat.${providerConfig.name}.fallback`, {
         reason: serviceError.code,
         status: serviceError.status,
         message: serviceError.message,
@@ -852,19 +874,25 @@ const generateGeminiChatReply = async (prompt: string) => {
 
   throw (
     lastError ??
-    new AIServiceError("AI_PROVIDER_ERROR", "Gemini failed for unknown reasons")
+    new AIServiceError(
+      "AI_PROVIDER_ERROR",
+      `${providerConfig.name} failed for unknown reasons`
+    )
   );
 };
 
-const generateGroqChatReply = async (prompt: string) => {
-  const reply = await generateGroqAnalysis(prompt);
-
-  return {
-    reply,
-    provider: "groq" as const,
-    model: "llama-3.1-8b-instant",
-  };
-};
+const CHAT_PROVIDERS: ChatProviderConfig[] = [
+  {
+    name: "groq",
+    model: GROQ_CHAT_MODEL,
+    provider: generateGroqAnalysis,
+  },
+  {
+    name: "gemini",
+    model: GEMINI_CHAT_MODEL,
+    provider: generateGeminiAnalysis,
+  },
+];
 
 const getChatFallbackReply = (context?: unknown) => {
   const maybeLanguage =
@@ -897,23 +925,43 @@ export const generateChatReply = async ({
     history: normalizedHistory,
   });
 
-  try {
-    return await generateGeminiChatReply(prompt);
-  } catch (geminiError) {
-    try {
-      return await generateGroqChatReply(prompt);
-    } catch (groqError) {
-      logger.error("chat.providers.exhausted", {
-        gemini_reason:
-          geminiError instanceof Error ? geminiError.message : "UNKNOWN",
-        groq_reason: groqError instanceof Error ? groqError.message : "UNKNOWN",
-      });
+  let groqError: Error | null = null;
+  let geminiError: Error | null = null;
 
-      return {
-        reply: getChatFallbackReply(context),
-        provider: "fallback",
-        model: "system",
-      };
+  try {
+    for (const providerConfig of CHAT_PROVIDERS) {
+      try {
+        return await callChatProviderWithRetry(providerConfig, prompt);
+      } catch (error) {
+        if (providerConfig.name === "groq") {
+          groqError = error instanceof Error ? error : new Error("UNKNOWN");
+        } else {
+          geminiError = error instanceof Error ? error : new Error("UNKNOWN");
+        }
+      }
     }
+
+    logger.error("chat.providers.exhausted", {
+      gemini_reason: geminiError?.message ?? "UNKNOWN",
+      groq_reason: groqError?.message ?? "UNKNOWN",
+    });
+
+    return {
+      reply: getChatFallbackReply(context),
+      provider: "fallback",
+      model: "system",
+    };
+  } catch (error) {
+    logger.error("chat.providers.exhausted", {
+      gemini_reason: geminiError?.message ?? "UNKNOWN",
+      groq_reason: groqError?.message ?? "UNKNOWN",
+      message: error instanceof Error ? error.message : "UNKNOWN",
+    });
+
+    return {
+      reply: getChatFallbackReply(context),
+      provider: "fallback",
+      model: "system",
+    };
   }
 };

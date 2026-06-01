@@ -151,7 +151,7 @@ const run = async () => {
 
   assert.equal(getCalls, 1);
   assert.equal(providerCalls.length, 1);
-  assert.equal(result.source, "gemini");
+  assert.equal(result.source, "groq");
   assert.equal(cache.size, 1);
   assert.equal(result.algorithm_name, "Counter Initialization");
   assert.deepEqual(result.algorithm_steps, [
@@ -171,25 +171,25 @@ const run = async () => {
   assert.equal(fallbackResult.algorithm_name, "Untitled Algorithm");
   assert.deepEqual(fallbackResult.algorithm_steps, []);
 
-  const groqFallbackResult = await analyzeCode("return 1", "javascript", {
+  const geminiFallbackResult = await analyzeCode("return 1", "javascript", {
     providers: [
       {
-        name: "gemini",
+        name: "groq",
         provider: async () => {
           throw new AIServiceError(
             "AI_NETWORK_ERROR",
-            "status 429: gemini busy",
+            "status 429: groq busy",
             429
           );
         },
       },
       {
-        name: "groq",
+        name: "gemini",
         provider: async () =>
           JSON.stringify({
             algorithm_name: "Single Return",
             pseudocode: ["1. RETURN result"],
-            algorithm_steps: ["1. Use Groq fallback."],
+            algorithm_steps: ["1. Use Gemini fallback."],
             time_complexity: "O(1)",
             space_complexity: "O(1)",
           }),
@@ -201,8 +201,8 @@ const run = async () => {
     },
   });
 
-  assert.equal(groqFallbackResult.source, "groq");
-  assert.equal(groqFallbackResult.algorithm_name, "Single Return");
+  assert.equal(geminiFallbackResult.source, "gemini");
+  assert.equal(geminiFallbackResult.algorithm_name, "Single Return");
 
   const key = getAnalysisCacheKey("console.log(2+3)", "javascript");
   const comparison = getAnalysisCacheKey(
