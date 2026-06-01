@@ -17,12 +17,12 @@ jobs:
       run:
         working-directory: backend
     env:
-      DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      JUDGE0_BASE_URL: ${{ secrets.JUDGE0_BASE_URL }}
-      PISTON_BASE_URL: ${{ secrets.PISTON_BASE_URL }}
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/codevista
+      SUPABASE_URL: https://example.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: test-service-role-key
+      GEMINI_API_KEY: test-gemini-api-key
+      JUDGE0_BASE_URL: https://example.com/judge0
+      PISTON_BASE_URL: https://example.com/piston
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,9 +49,9 @@ jobs:
       run:
         working-directory: frontend
     env:
-      NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+      NEXT_PUBLIC_API_URL: http://127.0.0.1:5000/api
+      NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: test-anon-key
     steps:
       - name: Checkout
         uses: actions/checkout@v4
