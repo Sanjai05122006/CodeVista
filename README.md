@@ -69,7 +69,7 @@ Understanding code at runtime is a different skill from writing it. Today, a stu
 │                  Node.js + Express Backend                   │
 │                                                              │
 │  Execution Service → Judge0 / Piston                         │
-│  AI Service        → Gemini / Groq                           │
+│  AI Service        → Groq / Gemini fallback                  │
 │  Chat Service      → Context-aware interaction               │
 │  Cache Layer       → Redis                                   │
 └──────────────────────────┬───────────────────────────────────┘
@@ -123,7 +123,7 @@ codevista/
 * npm
 * A Supabase project
 * Judge0 and Piston endpoints
-* Gemini API key
+* Groq and Gemini API keys
 
 ---
 
@@ -161,8 +161,8 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 JUDGE0_BASE_URL=your_judge0_url
 PISTON_BASE_URL=your_piston_url
-GEMINI_API_KEY=your_key
 GROQ_API_KEY=your_groq_key
+GEMINI_API_KEY=your_key
 PORT=5000
 ```
 
