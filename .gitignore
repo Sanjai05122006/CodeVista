@@ -74,3 +74,8 @@ dist/
 
 #SQL-Files
 backend/sql/
+
+# Local browser-test scratch artifacts
+frontend/e2e/
+frontend/playwright.config.ts
+frontend/test-results/
