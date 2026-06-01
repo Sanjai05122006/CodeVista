@@ -6,6 +6,7 @@ import { buildApiUrl } from "@/lib/api";
 import { useLocalChat } from "@/hooks/useLocalChat";
 import { useTypingEffect } from "@/hooks/useTypingEffect";
 import { useChatPersistence } from "@/hooks/useChatPersistence";
+import { StatusCard } from "@/components/ui/StatusCard";
 
 type Message = {
   id: string;
@@ -319,8 +320,13 @@ export default function CopilotWidget({
 
           <div className="relative border-t border-[var(--hairline)] bg-[var(--canvas)] p-3">
             {error ? (
-              <div className="mb-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-                {error}
+              <div className="mb-2">
+                <StatusCard
+                  variant="dark"
+                  tone="error"
+                  compact
+                  message={error}
+                />
               </div>
             ) : null}
 

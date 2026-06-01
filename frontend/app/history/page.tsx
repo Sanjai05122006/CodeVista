@@ -7,6 +7,7 @@ import { Clock3, History, MoveRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { fetchSessionHistory } from "@/lib/api";
 import { PublicPageFrame } from "@/components/layout/public-page-frame";
+import { StatusCard } from "@/components/ui/StatusCard";
 
 type HistorySession = {
   id: string;
@@ -166,8 +167,12 @@ export default function HistoryPage() {
       <PublicPageFrame headerVariant="landing">
         <main className="flex min-h-full px-6 py-10 text-[var(--body)] lg:px-10">
           <div className="mx-auto flex w-full max-w-5xl flex-1 items-start">
-            <div className="cv-shadow-lg w-full rounded-2xl border border-[var(--hairline)] bg-white p-8">
-              Loading history...
+            <div className="w-full">
+              <StatusCard
+                tone="info"
+                title="Loading history"
+                message="Preparing your saved sessions."
+              />
             </div>
           </div>
         </main>
@@ -208,24 +213,23 @@ export default function HistoryPage() {
 
           <div className="mt-10">
             {fetching ? (
-              <div className="rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-8 text-sm text-[var(--body)]">
-                Fetching saved sessions...
-              </div>
+              <StatusCard
+                tone="info"
+                title="Fetching saved sessions"
+                message="Retrieving your saved sessions now."
+              />
             ) : error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-8 text-sm text-red-600">
-                {error}
-              </div>
+              <StatusCard
+                tone="error"
+                title="Unable to load history"
+                message={error}
+              />
             ) : items.length === 0 ? (
-              <div className="rounded-xl border border-[var(--hairline)] bg-[var(--canvas-soft)] p-8">
-                <p className="font-display text-lg font-semibold tracking-[-0.54px] text-[var(--ink)]">
-                  No saved sessions yet
-                </p>
-                <p className="mt-2 text-sm leading-7 text-[var(--body)]">
-                  Run code in the editor and save activity through the existing
-                  session pipeline. Your recent work will appear here once
-                  records exist.
-                </p>
-              </div>
+              <StatusCard
+                tone="neutral"
+                title="No saved sessions yet"
+                message="Run code in the editor and save activity through the existing session pipeline. Your recent work will appear here once records exist."
+              />
             ) : (
               <div className="grid gap-4">
                 {items.map((item) => (

@@ -6,6 +6,7 @@ import { ArrowLeft, Database, LaptopMinimal } from "lucide-react";
 import { TraceExplorer } from "@/components/visualizer/trace-explorer";
 import { TraceInspector } from "@/components/visualizer/trace-inspector";
 import { useAuth } from "@/lib/auth-context";
+import { StatusCard } from "@/components/ui/StatusCard";
 import {
   fetchSessionDetail,
   type SessionDetail,
@@ -338,14 +339,24 @@ function EditorInsightsWorkspace() {
         ) : null}
 
         {loadError ? (
-          <div className="rounded-xl border border-amber-400/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-            {loadError}
-          </div>
+          <StatusCard
+            variant="dark"
+            tone="warning"
+            compact
+            title="Unable to restore trace"
+            message={loadError}
+          />
         ) : null}
 
         {loadingSnapshot || (authLoading && requestedSessionId) ? (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border border-white/10 bg-[#0b1220] p-8 text-center text-sm text-gray-400">
-            Restoring trace workspace...
+          <div className="flex flex-1 items-center">
+            <StatusCard
+              variant="dark"
+              tone="loading"
+              className="w-full"
+              title="Restoring trace workspace"
+              message="Pulling the latest snapshot for the visualizer."
+            />
           </div>
         ) : activeSnapshot ? (
           <TraceWorkspaceView
@@ -353,10 +364,18 @@ function EditorInsightsWorkspace() {
             snapshot={activeSnapshot}
           />
         ) : (
-          <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[#0b1220] p-8 text-center text-sm text-gray-400">
-            {requestedSessionId
-              ? "No saved trace could be restored for this session. Open the session in the editor and run it again if needed."
-              : "No trace snapshot is available yet. Run code in the editor, then open the visualizer."}
+          <div className="flex flex-1 items-center">
+            <StatusCard
+              variant="dark"
+              tone="neutral"
+              className="w-full border-dashed"
+              title="No trace snapshot yet"
+              message={
+                requestedSessionId
+                  ? "No saved trace could be restored for this session. Open the session in the editor and run it again if needed."
+                  : "Run code in the editor, then open the visualizer to inspect the trace."
+              }
+            />
           </div>
         )}
       </div>

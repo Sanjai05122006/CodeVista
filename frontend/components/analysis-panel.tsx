@@ -1,5 +1,7 @@
 "use client";
 
+import { StatusCard } from "@/components/ui/StatusCard";
+
 type AnalysisData = {
   pseudocode: string[];
   algorithm_steps: string[];
@@ -24,25 +26,37 @@ export default function AnalysisPanel({
 }: AnalysisPanelProps) {
   if (loading) {
     return (
-      <div className="flex-1 rounded-xl bg-[#020617] border border-white/10 p-4 text-sm text-gray-400">
-        Generating deterministic analysis...
-      </div>
+      <StatusCard
+        variant="dark"
+        tone="loading"
+        className="flex-1"
+        title="Generating deterministic analysis..."
+        message="Working through the code to produce structured output."
+      />
     );
   }
 
   if (error) {
     return (
-      <div className="flex-1 rounded-xl bg-[#020617] border border-red-500/20 p-4 text-sm text-red-300">
-        {error}
-      </div>
+      <StatusCard
+        variant="dark"
+        tone="error"
+        className="flex-1"
+        title="Analysis unavailable"
+        message={error}
+      />
     );
   }
 
   if (!analysis) {
     return (
-      <div className="flex-1 rounded-xl bg-[#020617] border border-white/10 p-4 text-sm text-gray-500">
-        Run your code to generate algorithm analysis.
-      </div>
+      <StatusCard
+        variant="dark"
+        tone="neutral"
+        className="flex-1"
+        title="No analysis yet"
+        message="Run your code to generate algorithm analysis."
+      />
     );
   }
 

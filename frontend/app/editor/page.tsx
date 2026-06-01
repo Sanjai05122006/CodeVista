@@ -9,6 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { LogIn } from "lucide-react";
 import AnalysisPanel from "../../components/analysis-panel";
 import ChatContainer from "@/components/chat/ChatContainer";
+import { StatusCard } from "@/components/ui/StatusCard";
 import {
   fetchSessionDetail,
   runWorkspace,
@@ -524,8 +525,14 @@ function EditorWorkspace() {
 
               <div className="flex-1 min-h-[320px] lg:min-h-0">
                 {monacoError ? (
-                  <div className="flex h-full items-center justify-center border-t border-white/5 bg-[#08101d] px-6 text-center text-sm text-red-300">
-                    Monaco failed to initialize. {monacoError}
+                  <div className="flex h-full items-center justify-center border-t border-white/5 bg-[#08101d] px-4">
+                    <StatusCard
+                      variant="dark"
+                      tone="error"
+                      title="Monaco failed to initialize"
+                      message={monacoError}
+                      className="h-full w-full max-w-2xl"
+                    />
                   </div>
                 ) : monacoReady ? (
                   <Editor
@@ -581,19 +588,31 @@ function EditorWorkspace() {
 
             <div className="flex min-h-[380px] flex-col gap-4 rounded-2xl bg-[#0b1220] p-4 lg:min-h-0 lg:w-[30%]">
               {executionError && (
-                <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
-                  {executionError}
-                </div>
+                <StatusCard
+                  variant="dark"
+                  tone="error"
+                  compact
+                  title="Execution failed"
+                  message={executionError}
+                />
               )}
               {saveError && (
-                <div className="rounded-lg border border-amber-400/20 bg-amber-500/10 p-3 text-sm text-amber-300">
-                  {saveError}
-                </div>
+                <StatusCard
+                  variant="dark"
+                  tone="warning"
+                  compact
+                  title="Save interrupted"
+                  message={saveError}
+                />
               )}
               {requestedSessionId && activeRestoredSessionTitle && (
-                <div className="rounded-lg border border-white/10 bg-[#111827] p-3 text-sm text-gray-300">
-                  Restored session: {activeRestoredSessionTitle}
-                </div>
+                <StatusCard
+                  variant="dark"
+                  tone="info"
+                  compact
+                  title="Restored session"
+                  message={`Restored session: ${activeRestoredSessionTitle}`}
+                />
               )}
 
               <div>
