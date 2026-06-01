@@ -88,11 +88,6 @@ function TraceWorkspaceView({ snapshot }: { snapshot: TraceWorkspaceSnapshot }) 
   const currentTraceStep = snapshot.traceSteps[traceIndex] ?? null;
 
   useEffect(() => {
-    setTraceIndex(0);
-    setIsTracePlaying(false);
-  }, [snapshot.capturedAt, snapshot.sessionId]);
-
-  useEffect(() => {
     if (!isTracePlaying || snapshot.traceSteps.length <= 1) {
       return;
     }
@@ -219,11 +214,15 @@ function EditorInsightsWorkspace() {
 
   useEffect(() => {
     if (!requestedSessionId || !accessToken) {
-      setSessionSnapshot(null);
-      if (!requestedSessionId) {
+      const resetTimer = window.setTimeout(() => {
+        setSessionSnapshot(null);
+        setLoadingSnapshot(false);
         setLoadError(null);
-      }
-      return;
+      }, 0);
+
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
     }
 
     let active = true;

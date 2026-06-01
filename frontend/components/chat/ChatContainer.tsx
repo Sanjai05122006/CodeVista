@@ -79,7 +79,13 @@ export default function CopilotWidget({
 
   useEffect(() => {
     if (autoOpen) {
-      setOpen(true);
+      const timer = window.setTimeout(() => {
+        setOpen(true);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(timer);
+      };
     }
   }, [autoOpen]);
 

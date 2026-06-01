@@ -79,8 +79,10 @@ export default function HistoryPage() {
       }
     }
 
-    setFetching(true);
-    setError(null);
+    const resetTimer = window.setTimeout(() => {
+      setFetching(true);
+      setError(null);
+    }, 0);
 
     void fetchSessionHistory(accessToken, { limit: PAGE_SIZE, offset: 0 })
       .then((data) => {
@@ -107,10 +109,11 @@ export default function HistoryPage() {
         if (active) {
           setFetching(false);
         }
-      });
+    });
 
     return () => {
       active = false;
+      window.clearTimeout(resetTimer);
     };
   }, [accessToken, session?.user?.id]);
 

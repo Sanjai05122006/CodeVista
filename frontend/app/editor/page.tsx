@@ -181,9 +181,8 @@ function EditorWorkspace() {
       return;
     }
 
-    setHasRestoredConversation(false);
-
     const timer = window.setTimeout(() => {
+      setHasRestoredConversation(false);
       const threadId = getStoredThreadId();
       setStoredThreadId(threadId);
       setChatThreadId(threadId);
