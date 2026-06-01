@@ -144,8 +144,8 @@ cd codevista
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_SUPPORT_EMAIL=your_email
-NEXT_PUBLIC_GITHUB_URL=your_link
+NEXT_PUBLIC_SUPPORT_EMAIL=sanjai05126@gmail.com
+NEXT_PUBLIC_GITHUB_URL=https://github.com/Sanjai05122006
 ```
 
 Next.js accepts only `.env.local` for frontend environment variables.
