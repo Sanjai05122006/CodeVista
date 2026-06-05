@@ -1,15 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Activity,
-  Code2,
-  GitBranch,
-  Lock,
+  BarChart3,
+  Boxes,
+  Eye,
+  EyeOff,
+  LockKeyhole,
   Mail,
+  Shield,
   User,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
@@ -22,29 +24,31 @@ type RegisterFeedback = {
   message: string;
 };
 
+const featureItems = [
+  {
+    icon: BarChart3,
+    title: "AI-Powered Analysis",
+    description:
+      "Generate pseudocode, algorithm steps, and complexity analysis instantly.",
+  },
+  {
+    icon: Boxes,
+    title: "Built-in Visualizer",
+    description:
+      "Visualize code execution with step-by-step flow, variables, and call stack.",
+  },
+  {
+    icon: Shield,
+    title: "Secure & Personal",
+    description:
+      "Your code, history, and sessions are always secure and private.",
+  },
+];
+
 const delay = (ms: number) =>
   new Promise<void>((resolve) => {
     window.setTimeout(resolve, ms);
   });
-
-const passwordRequirements = [
-  {
-    label: "At least 8 characters",
-    test: (value: string) => value.length >= 8,
-  },
-  {
-    label: "One uppercase letter",
-    test: (value: string) => /[A-Z]/.test(value),
-  },
-  {
-    label: "One number",
-    test: (value: string) => /\d/.test(value),
-  },
-  {
-    label: "One special character",
-    test: (value: string) => /[^A-Za-z0-9]/.test(value),
-  },
-];
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -53,7 +57,8 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<RegisterFeedback | null>(null);
 
@@ -81,25 +86,6 @@ export default function RegisterPage() {
         tone: "error",
         title: "Passwords do not match",
         message: "Please enter the same password in both fields.",
-      });
-      return;
-    }
-
-    if (!passwordRequirements.every((requirement) => requirement.test(password))) {
-      setFeedback({
-        tone: "error",
-        title: "Password needs more strength",
-        message:
-          "Use at least 8 characters, including an uppercase letter, a number, and a special character.",
-      });
-      return;
-    }
-
-    if (!agreedToTerms) {
-      setFeedback({
-        tone: "error",
-        title: "Terms not accepted",
-        message: "Accept the terms to continue.",
       });
       return;
     }
@@ -165,253 +151,358 @@ export default function RegisterPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col bg-[var(--canvas-soft)] lg:flex-row">
-      <section className="cv-mesh-gradient hidden lg:flex lg:w-1/2 lg:flex-col lg:px-16 lg:py-12">
-        <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
-            <Code2 size={18} />
-          </div>
-          <div>
-            <p className="font-display text-lg font-semibold tracking-[-0.54px] text-[var(--ink)]">
-              CodeVista
-            </p>
-            <p className="font-mono-ui text-[12px] text-[var(--mute)]">
-              developer intelligence
-            </p>
-          </div>
-        </Link>
-
-        <div className="max-w-xl pt-16">
-          <p className="font-display inline-flex items-center rounded-full border border-[var(--hairline)] bg-white/75 px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--ink)]">
-            Create an account
-          </p>
-          <h1 className="font-display mt-5 text-[48px] font-semibold tracking-[-2.4px] text-[var(--ink)]">
-            Start understanding code with more clarity.
-          </h1>
-          <p className="mt-6 max-w-md text-[18px] leading-8 text-[var(--body)]">
-            Build your workspace, save progress across sessions, and keep
-            execution, analysis, and learning history together.
-          </p>
-
-          <div className="mt-10 grid gap-6">
-            <Feature
-              icon={<Code2 size={18} />}
-              title="Write and run"
-              desc="Use one workspace for code, output, and explanation."
-            />
-            <Feature
-              icon={<GitBranch size={18} />}
-              title="Follow the logic"
-              desc="Replay execution and revisit earlier learning sessions."
-            />
-            <Feature
-              icon={<Activity size={18} />}
-              title="Learn with context"
-              desc="Keep analysis, history, and questions tied to the same work."
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="flex w-full items-center px-6 py-10 sm:px-10 lg:w-1/2 lg:px-16 lg:py-12">
-        <div className="mx-auto w-full max-w-md">
-          <Link href="/" className="mb-10 flex items-center gap-3 lg:hidden">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
-              <Code2 size={18} />
-            </div>
-            <div>
-              <p className="font-display text-base font-semibold tracking-[-0.48px] text-[var(--ink)]">
-                CodeVista
-              </p>
-              <p className="font-mono-ui text-[12px] text-[var(--mute)]">
-                developer intelligence
-              </p>
-            </div>
-          </Link>
-
-          <p className="font-display inline-flex items-center rounded-full border border-[var(--hairline)] bg-white px-3 py-1 text-[12px] font-semibold uppercase tracking-[0.22em] text-[var(--ink)]">
-            Register
-          </p>
-          <h2 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
-            Create your workspace.
-          </h2>
-          <p className="mt-3 text-[16px] leading-7 text-[var(--body)]">
-            Set up your account to save sessions and continue learning over time.
-          </p>
-
-          <form onSubmit={handleSubmit} className="mt-8">
-            <div className="grid gap-4">
-              <InputField
-                label="Full name"
-                icon={<User size={18} />}
-                placeholder="Enter your name"
-                value={fullName}
-                onChange={(event) => setFullName(event.target.value)}
-                autoComplete="name"
-              />
-              <InputField
-                label="Email address"
-                icon={<Mail size={18} />}
-                placeholder="Enter your email"
-                type="email"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                autoComplete="email"
-              />
-              <InputField
-                label="Password"
-                icon={<Lock size={18} />}
-                placeholder="Create a password"
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="new-password"
-              />
-              <InputField
-                label="Confirm password"
-                icon={<Lock size={18} />}
-                placeholder="Confirm your password"
-                type="password"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                autoComplete="new-password"
-              />
-            </div>
-
-            <div className="mt-6 grid gap-3 text-sm text-[var(--body)] sm:grid-cols-2">
-              {passwordRequirements.map((requirement) => {
-                const matched = requirement.test(password);
-
-                return (
-                  <span
-                    key={requirement.label}
-                    className={matched ? "text-[var(--ink)]" : "text-[var(--mute)]"}
-                  >
-                    {matched ? "•" : "○"} {requirement.label}
-                  </span>
-                );
-              })}
-            </div>
-
-            <label className="mt-6 flex gap-3 text-sm text-[var(--body)]">
-              <input
-                type="checkbox"
-                checked={agreedToTerms}
-                onChange={(event) => setAgreedToTerms(event.target.checked)}
-                className="mt-1 h-4 w-4 accent-[#171717]"
-              />
-              <span>
-                I agree to the Terms of Service and Privacy Policy.
-              </span>
-            </label>
-
-            <button
-              type="submit"
-              disabled={submitting}
-              className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-[100px] bg-[var(--ink)] px-6 text-[15px] font-semibold text-[var(--on-primary)] transition hover:opacity-90 disabled:opacity-60"
-            >
-              Create account
-            </button>
-          </form>
-
-          {feedback ? (
-            <div className="mt-6">
-              <StatusCard
-                tone={feedback.tone}
-                title={feedback.title}
-                message={feedback.message}
-                compact
-              />
-            </div>
-          ) : null}
-
-          <div className="my-6 flex items-center gap-4 text-sm text-[var(--mute)]">
-            <div className="h-px flex-1 bg-[var(--hairline)]" />
-            or continue with
-            <div className="h-px flex-1 bg-[var(--hairline)]" />
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleSignup}
-            disabled={submitting}
-            className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-[100px] border border-[var(--hairline)] bg-white px-6 text-sm font-semibold text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:opacity-60"
-          >
-            <Image src="/google.svg" alt="" width={18} height={18} />
-            Continue with Google
-          </button>
-
-          <p className="mt-6 text-center text-sm text-[var(--body)]">
-            Already have an account?{" "}
-            <button
-              type="button"
-              onClick={() => router.push("/login")}
-              className="text-[var(--ink)] underline underline-offset-4"
-            >
-              Sign in
-            </button>
-          </p>
-        </div>
-      </section>
+    <main className="min-h-screen overflow-x-hidden bg-[#f5f6ff] text-slate-950">
+      <div className="grid min-h-screen w-full bg-white lg:grid-cols-[1.12fr_0.88fr]">
+        <LeftPanel />
+        <RightPanel
+          confirmPassword={confirmPassword}
+          email={email}
+          feedback={feedback}
+          fullName={fullName}
+          onConfirmPasswordChange={setConfirmPassword}
+          onEmailChange={setEmail}
+          onFullNameChange={setFullName}
+          onGoogle={handleGoogleSignup}
+          onPasswordChange={setPassword}
+          onSubmit={handleSubmit}
+          password={password}
+          setShowConfirmPassword={setShowConfirmPassword}
+          setShowPassword={setShowPassword}
+          showConfirmPassword={showConfirmPassword}
+          showPassword={showPassword}
+          submitting={submitting}
+        />
+      </div>
     </main>
   );
 }
 
-function Feature({
-  icon,
-  title,
-  desc,
-}: {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-}) {
+function LeftPanel() {
   return (
-    <div className="flex items-start gap-4">
-      <div className="flex h-11 w-11 items-center justify-center rounded-md border border-[var(--hairline)] bg-white text-[var(--ink)] cv-shadow-sm">
-        {icon}
+    <section className="relative hidden overflow-hidden bg-[linear-gradient(180deg,#f7f8ff_0%,#f3f4ff_56%,#eef1ff_100%)] px-16 py-14 lg:flex lg:min-h-screen lg:flex-col lg:px-24 lg:py-20">
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-[-10%] top-[8%] h-[26rem] w-[26rem] rounded-full bg-[#dde1ff]/60 blur-3xl" />
+        <div className="absolute bottom-[-12%] right-[-6%] h-[20rem] w-[20rem] rounded-full bg-[#e5e8ff]/70 blur-3xl" />
+        <svg
+          aria-hidden="true"
+          viewBox="0 0 900 900"
+          className="absolute left-[43%] top-[55%] h-[20rem] w-[31rem] opacity-55"
+        >
+          <g fill="none" stroke="rgba(255,255,255,0.72)" strokeWidth="1.15">
+            <path d="M34 490c120-88 236-88 348 0s226 88 348 0" />
+            <path d="M20 522c126-91 248-91 364 0s230 91 356 0" />
+            <path d="M10 554c130-93 260-93 380 0s236 93 366 0" />
+            <path d="M0 586c134-95 270-95 396 0s242 95 378 0" />
+          </g>
+        </svg>
       </div>
-      <div>
-        <p className="font-display text-[20px] font-semibold tracking-[-0.6px] text-[var(--ink)]">
-          {title}
-        </p>
-        <p className="mt-1 text-sm leading-6 text-[var(--body)]">{desc}</p>
+
+      <div className="relative z-10">
+        <div className="flex items-center gap-4">
+          <CodeMark />
+          <p className="text-[24px] font-semibold tracking-[-0.06em] text-slate-950">
+            CodeVista
+          </p>
+        </div>
+
+        <div className="mt-[15px] max-w-[640px]">
+          <h1 className="text-[60px] font-semibold leading-[1.04] tracking-[-0.07em] text-slate-950">
+            The modern way
+            <br />
+            to code and understand.
+          </h1>
+
+          <p className="mt-10 max-w-[590px] text-[17px] leading-[1.68] text-slate-600">
+            CodeVista helps developers and learners visualize execution,
+            analyze complexity, and get AI-powered explanations
+            {" "}
+            — all in one intelligent IDE.
+          </p>
+        </div>
       </div>
-    </div>
+
+      <div className="relative z-10 mt-14 grid max-w-[650px] gap-7">
+        {featureItems.map((item) => {
+          const Icon = item.icon;
+
+          return (
+            <div key={item.title} className="flex items-start gap-6">
+              <div className="flex h-[74px] w-[74px] shrink-0 items-center justify-center rounded-[18px] bg-white shadow-[0_12px_28px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/80">
+                <Icon className="h-8 w-8 text-slate-950" strokeWidth={2.1} />
+              </div>
+              <div className="pt-1">
+                <h2 className="text-[18px] font-semibold tracking-[-0.03em] text-slate-950">
+                  {item.title}
+                </h2>
+                <p className="mt-2 max-w-[440px] text-[16px] leading-[1.58] text-slate-600">
+                  {item.description}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
-function InputField({
-  label,
-  icon,
-  placeholder,
-  type = "text",
-  value,
-  onChange,
-  autoComplete,
+function RightPanel({
+  confirmPassword,
+  email,
+  feedback,
+  fullName,
+  onConfirmPasswordChange,
+  onEmailChange,
+  onFullNameChange,
+  onGoogle,
+  onPasswordChange,
+  onSubmit,
+  password,
+  setShowConfirmPassword,
+  setShowPassword,
+  showConfirmPassword,
+  showPassword,
+  submitting,
 }: {
-  label: string;
-  icon: React.ReactNode;
-  placeholder: string;
-  type?: string;
-  value: string;
-  onChange: React.ChangeEventHandler<HTMLInputElement>;
-  autoComplete?: string;
+  confirmPassword: string;
+  email: string;
+  feedback: RegisterFeedback | null;
+  fullName: string;
+  onConfirmPasswordChange: (value: string) => void;
+  onEmailChange: (value: string) => void;
+  onFullNameChange: (value: string) => void;
+  onGoogle: () => void;
+  onPasswordChange: (value: string) => void;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  password: string;
+  setShowConfirmPassword: (value: boolean) => void;
+  setShowPassword: (value: boolean) => void;
+  showConfirmPassword: boolean;
+  showPassword: boolean;
+  submitting: boolean;
 }) {
   return (
-    <label className="grid gap-2">
-      <span className="text-sm font-medium text-[var(--ink)]">{label}</span>
-      <div className="flex items-center gap-3 rounded-md border border-[var(--hairline)] bg-white px-4 py-3 transition focus-within:border-[var(--ink)]">
-        <div className="text-[var(--mute)]">{icon}</div>
-        <input
-          type={type}
-          placeholder={placeholder}
-          value={value}
-          onChange={onChange}
-          autoComplete={autoComplete}
-          className="w-full bg-transparent text-sm text-[var(--ink)] outline-none placeholder:text-[var(--mute)]"
-        />
+    <section className="flex min-h-screen items-start justify-center overflow-y-auto px-6 py-12 sm:px-10 lg:px-16 lg:py-20">
+      <div className="w-full max-w-[440px]">
+        <div className="lg:hidden">
+          <div className="flex items-center gap-4">
+            <CodeMark />
+            <p className="text-[24px] font-semibold tracking-[-0.06em] text-slate-950">
+              CodeVista
+            </p>
+          </div>
+        </div>
+
+        <div className="pt-2 lg:pt-0">
+          <h2 className="text-center text-[42px] font-semibold tracking-[-0.06em] text-slate-950">
+            Create your account
+          </h2>
+          <p className="mt-3 text-center text-[14px] text-[#6b7280]">
+            Join CodeVista and get started for free.
+          </p>
+
+          <form
+            className="mt-8 space-y-4"
+            onSubmit={onSubmit}
+          >
+            <Field label="Full name" icon={<User className="h-5 w-5" />}>
+              <input
+                type="text"
+                name="fullName"
+                placeholder="Enter your full name"
+                autoComplete="name"
+                value={fullName}
+                onChange={(event) => onFullNameChange(event.target.value)}
+                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+              />
+            </Field>
+
+            <Field label="Email address" icon={<Mail className="h-5 w-5" />}>
+              <input
+                type="email"
+                name="email"
+                placeholder="Enter your email"
+                autoComplete="email"
+                value={email}
+                onChange={(event) => onEmailChange(event.target.value)}
+                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+              />
+            </Field>
+
+            <Field
+              label="Password"
+              icon={<LockKeyhole className="h-5 w-5" />}
+              trailing={
+                <PasswordToggle
+                  onClick={() => setShowPassword(!showPassword)}
+                  pressed={showPassword}
+                />
+              }
+            >
+              <input
+                type={showPassword ? "text" : "password"}
+                name="password"
+                placeholder="Create a password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => onPasswordChange(event.target.value)}
+                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+              />
+            </Field>
+
+            <p className="mt-[-1px] text-[14px] text-[#6b7280]">
+              At least 8 characters
+            </p>
+
+            <Field
+              label="Confirm password"
+              icon={<LockKeyhole className="h-5 w-5" />}
+              trailing={
+                <PasswordToggle
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  pressed={showConfirmPassword}
+                />
+              }
+            >
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                name="confirmPassword"
+                placeholder="Confirm your password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(event) => onConfirmPasswordChange(event.target.value)}
+                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+              />
+            </Field>
+
+            <button
+              type="submit"
+              disabled={submitting}
+              className="flex h-[58px] w-full items-center justify-center rounded-[16px] bg-[linear-gradient(180deg,#0f1726_0%,#060b14_100%)] text-[14px] font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.22)] transition hover:brightness-110 disabled:opacity-60"
+            >
+              Create account
+            </button>
+
+            <div className="flex items-center gap-4 pt-1 text-[#94a3b8]">
+              <div className="h-px flex-1 bg-[#e2e8f0]" />
+              <span className="text-[16px]">or</span>
+              <div className="h-px flex-1 bg-[#e2e8f0]" />
+            </div>
+
+            <button
+              type="button"
+              onClick={onGoogle}
+              disabled={submitting}
+              className="flex h-[58px] w-full items-center justify-center gap-3 rounded-[16px] border border-[#d6dbea] bg-white text-[14px] font-medium text-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 disabled:opacity-60"
+            >
+              <GoogleMark />
+              Sign up with Google
+            </button>
+
+            <p className="sr-only" aria-live="polite">
+              {feedback ? `${feedback.title}. ${feedback.message}` : ""}
+            </p>
+
+            {feedback ? (
+              <div className="pt-2">
+                <StatusCard
+                  tone={feedback.tone}
+                  title={feedback.title}
+                  message={feedback.message}
+                  compact
+                />
+              </div>
+            ) : null}
+
+            <p className="pt-2 text-center text-[14px] text-[#6b7280]">
+              Already have an account?{" "}
+              <Link
+                href="/login"
+                className="font-medium text-[#1d4ed8] transition hover:opacity-80"
+              >
+                Sign in
+              </Link>
+            </p>
+          </form>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Field({
+  label,
+  icon,
+  trailing,
+  children,
+}: {
+  label: string;
+  icon: ReactNode;
+  trailing?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <label className="grid gap-2.5">
+      <span className="text-[18px] font-semibold text-slate-950">{label}</span>
+      <div className="flex h-[68px] items-center gap-4 rounded-[16px] border border-[#d6dbea] bg-white px-5 shadow-[0_10px_24px_rgba(15,23,42,0.03)]">
+        <div className="shrink-0 text-[#64748b]">{icon}</div>
+        <div className="min-w-0 flex-1">{children}</div>
+        {trailing ? <div className="text-[#64748b]">{trailing}</div> : null}
       </div>
     </label>
+  );
+}
+
+function CodeMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-11 w-11 text-slate-950"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M8 6 2.5 12 8 18" />
+      <path d="M16 6 21.5 12 16 18" />
+      <path d="M10 20 14 4" />
+    </svg>
+  );
+}
+
+function PasswordToggle({
+  pressed,
+  onClick,
+}: {
+  pressed: boolean;
+  onClick: () => void;
+}) {
+  const Icon = pressed ? EyeOff : Eye;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={pressed}
+      className="rounded-full text-[#64748b] transition hover:text-slate-950"
+      aria-label={pressed ? "Hide password" : "Show password"}
+    >
+      <Icon className="h-5 w-5" />
+    </button>
+  );
+}
+
+function GoogleMark() {
+  return (
+    <Image
+      src="/google.svg"
+      alt=""
+      width={18}
+      height={18}
+      className="h-[18px] w-[18px] shrink-0"
+      unoptimized
+    />
   );
 }
