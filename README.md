@@ -1,45 +1,50 @@
+<div align="center">
+
 # CodeVista
 
-> **Code execution. Structured AI analysis. Step-by-step visualisation. All in one place.**
+**Code execution. Structured AI analysis. Step-by-step visualisation. All in one place.**
 
-CodeVista is a developer intelligence platform built for students, interview candidates, and junior engineers who want to truly *understand* code — not just run it. Write code, execute it in a real sandbox, get deterministic AI-powered pseudocode and complexity analysis, watch it execute step by step inside the editor, and come back to the same session tomorrow.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![License](https://img.shields.io/badge/License-Educational-blue?style=flat-square)]()
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)]()
 
-No tab switching. No fragmented tools. One environment.
+[Overview](#overview) · [Features](#features) · [Language Support](#language-support) · [Architecture](#architecture) · [Getting Started](#getting-started) · [Design Decisions](#design-decisions) · [Contributing](#contributing)
 
----
-
-## The Problem
-
-Understanding code at runtime is a different skill from writing it. A student trying to understand recursion today has to:
-
-1. Write code in VS Code
-2. Run it in a terminal or Replit
-3. Ask ChatGPT for an explanation
-4. Open Python Tutor to visualise it
-5. Lose all context the next day
-
-**CodeVista collapses all five steps into one.**
+</div>
 
 ---
 
-## What You Can Do
+## Overview
 
-- Write and run code in a browser-based Monaco editor
-- Execute against a real sandboxed environment with live runtime output
-- Get structured AI analysis — pseudocode, algorithm breakdown, and Big-O complexity
-- Watch your code execute step by step with variable state and call stack
-- Ask follow-up questions in a contextual AI chat panel
-- Revisit past sessions and replay execution traces
+CodeVista is a developer intelligence platform for students, interview candidates, and junior engineers who want to *understand* code — not just run it.
+
+Today, understanding code at runtime requires five separate tools: an editor, a runner, an AI explainer, a visualiser, and something to save context between sessions. **CodeVista collapses all five into one environment.**
+
+Write code, execute it in a real sandbox, receive deterministic AI-powered pseudocode and complexity analysis, watch it execute step by step with live variable state and call stack, ask follow-up questions in context, and return to the same session the next day.
+
+---
+
+## Features
+
+- **Monaco editor** — browser-based editor with syntax highlighting and language support
+- **Sandboxed execution** — runs real code against Judge0 (primary) with Piston fallback
+- **Structured AI analysis** — deterministic pseudocode, algorithm breakdown, and Big-O complexity
+- **Step-by-step visualiser** — execution trace with variable state and call stack at each step
+- **Contextual AI chat** — follow-up questions grounded in the current code and execution context
+- **Session persistence** — revisit past sessions and replay execution traces
 
 ---
 
 ## Language Support
 
-| Language   | Execution | AI Analysis | Execution Trace |
-|------------|-----------|-------------|-----------------|
-| Python     | ✅        | ✅          | Full            |
-| JavaScript | ✅        | ✅          | Partial         |
-| C++        | ✅        | ✅          | Full            |
+| Language | Execution | AI Analysis | Execution Trace |
+|---|---|---|---|
+| Python | ✅ | ✅ | Full |
+| JavaScript | ✅ | ✅ | Partial |
+| C++ | ✅ | ✅ | Full |
 
 ---
 
@@ -49,38 +54,36 @@ Understanding code at runtime is a different skill from writing it. A student tr
 
 **Backend** — Node.js · Express · TypeScript · Redis
 
-**Infrastructure** — Supabase (PostgreSQL + Auth) · Judge0 / Piston (code execution) · Groq / Gemini (AI layer)
+**Infrastructure** — Supabase (PostgreSQL + Auth) · Judge0 / Piston · Groq / Gemini
 
 ---
 
-## System Architecture
+## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│                        USER (Browser)                        │
-│                     Next.js Frontend                         │
-│                                                              │
-│  Monaco Editor   │   Visualiser   │   AI Chat Panel         │
-└──────────────────────────┬───────────────────────────────────┘
-                           │ HTTP / REST
-                           ▼
-┌──────────────────────────────────────────────────────────────┐
-│                  Node.js + Express Backend                   │
-│                                                              │
-│  Execution Service → Judge0 (primary) / Piston (fallback)   │
-│  AI Service        → Groq / Gemini fallback                  │
-│  Chat Service      → Context-aware interaction               │
-│  Cache Layer       → Redis                                   │
-└──────────────────────────┬───────────────────────────────────┘
-                           │
-            ┌──────────────┴──────────────┐
-            ▼                             ▼
-      Judge0 / Piston              Supabase PostgreSQL
+┌─────────────────────────────────────────────────────────────┐
+│                         Browser                             │
+│                    Next.js Frontend                         │
+│                                                             │
+│   Monaco Editor  │  Step Visualiser  │  AI Chat Panel      │
+└─────────────────────────────┬───────────────────────────────┘
+                              │ HTTP / REST
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 Node.js + Express Backend                   │
+│                                                             │
+│  Execution Service → Judge0 (primary) / Piston (fallback)  │
+│  AI Service        → Groq / Gemini (fallback)              │
+│  Chat Service      → stateless, context-aware              │
+│  Cache Layer       → Redis (analysis + execution results)  │
+└─────────────────────────────┬───────────────────────────────┘
+                              │
+               ┌──────────────┴──────────────┐
+               ▼                             ▼
+        Judge0 / Piston             Supabase (PostgreSQL)
 ```
 
----
-
-## Repository Structure
+### Repository Structure
 
 ```
 codevista/
@@ -89,51 +92,45 @@ codevista/
 │   ├── components/
 │   ├── hooks/
 │   └── lib/
-│
-├── backend/
-│   └── src/
-│       ├── controllers/
-│       ├── services/
-│       ├── integrations/
-│       ├── routes/
-│       ├── middleware/
-│       └── config/
-│
-└── .env.example
+└── backend/
+    └── src/
+        ├── controllers/
+        ├── services/
+        ├── integrations/
+        ├── routes/
+        ├── middleware/
+        └── config/
 ```
 
 ---
 
-## Local Setup
+## Getting Started
 
 ### Prerequisites
 
 - Node.js v18+
-- npm
 - A [Supabase](https://supabase.com) project
-- Judge0 and Piston endpoints
+- Judge0 and Piston endpoints (self-hosted or managed)
 - Groq and Gemini API keys
 
-### Clone
+### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Sanjai05122006/codevista.git
 cd codevista
 ```
 
-### Configure Environment Variables
+### 2. Configure environment variables
 
-**Frontend** — create `frontend/.env.local`:
+**Frontend** — `frontend/.env.local`:
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-NEXT_PUBLIC_SUPPORT_EMAIL=sanjai05126@gmail.com
-NEXT_PUBLIC_GITHUB_URL=https://github.com/Sanjai05122006
 ```
 
-**Backend** — create `backend/.env`:
+**Backend** — `backend/.env`:
 
 ```env
 FRONTEND_URL=http://localhost:3000
@@ -147,7 +144,7 @@ GEMINI_API_KEY=your_gemini_key
 PORT=5000
 ```
 
-### Start the Backend
+### 3. Start the backend
 
 ```bash
 cd backend
@@ -155,7 +152,7 @@ npm install
 npm run dev
 ```
 
-### Start the Frontend
+### 4. Start the frontend
 
 ```bash
 cd frontend
@@ -167,23 +164,23 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## Key Design Decisions
+## Design Decisions
 
-**Deterministic AI output** — every analysis call uses temperature=0, JSON schema validation, and caching. The same code always produces the same pseudocode and complexity breakdown.
+**Deterministic AI output** — every analysis request uses `temperature=0`, JSON schema validation, and a Redis cache keyed by `SHA-256(code + language)`. The same code always produces the same pseudocode and complexity breakdown. This eliminates drift and makes AI output reliable enough to display without human review.
 
-**Cache-first** — analysis results are cached by `SHA-256(code + language)` for 24 hours. Execution results for 1 hour. At scale, this is the single largest cost and latency lever.
+**Cache-first** — analysis results are cached for 24 hours; execution results for 1 hour. At scale, repeated analysis of common patterns (sorting algorithms, recursion examples) is the single largest cost and latency lever.
 
-**Fault-tolerant execution** — Judge0 is the primary runner. If it fails or times out, the system automatically falls back to Piston. No single point of failure.
+**Fault-tolerant execution** — Judge0 is the primary runner. On failure or timeout, the system falls back to Piston automatically. No user-facing error on transient infrastructure issues.
 
-**Stateless chat** — the chat service is fully stateless on the server. The frontend sends full conversation history with every request, keeping the backend horizontally scalable.
+**Stateless chat** — the chat service holds no server-side session state. The frontend sends full conversation history with every request, keeping the backend stateless and horizontally scalable without sticky sessions.
 
 ---
 
 ## Contributing
 
-Contributions are welcome from developers interested in improving the platform, refining the developer experience, or expanding the feature set.
+Contributions are welcome. For significant changes, open an issue first to discuss the proposed improvement before submitting a pull request. Bug fixes and documentation improvements can be submitted directly.
 
-For significant changes, please open an issue first to discuss the proposed improvement before submitting a pull request.
+Please follow the existing code style and ensure any new API routes are covered by integration tests.
 
 ---
 
@@ -191,4 +188,8 @@ For significant changes, please open an issue first to discuss the proposed impr
 
 This project is intended for educational and developer tooling purposes.
 
-*Built to simplify how developers understand code execution and runtime behaviour.*
+---
+
+<div align="center">
+<sub>Built to simplify how developers understand code execution and runtime behaviour.</sub>
+</div>
