@@ -2,7 +2,7 @@
 
 # CodeVista
 
-**Code execution. Structured AI analysis. Step-by-step visualisation. All in one place.**
+**Write code. Run it. Understand it.**
 
 [![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
@@ -11,92 +11,103 @@
 [![License](https://img.shields.io/badge/License-Educational-blue?style=flat-square)]()
 [![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)]()
 
-[Overview](#overview) · [Features](#features) · [Language Support](#language-support) · [Architecture](#architecture) · [Getting Started](#getting-started) · [Design Decisions](#design-decisions) · [Contributing](#contributing)
+[Overview](#overview) · [Features](#features) · [Architecture](#architecture) · [Getting Started](#getting-started) · [Environment Variables](#environment-variables) · [Contributing](#contributing)
+
 
 </div>
 
-- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS
-- UI / motion: Monaco Editor, Framer Motion, React Flow
-- UI testing: Agent Browser for browser-driven UI checks
-- Backend: Node.js, Express 5, TypeScript
-- Validation: Zod
-- Auth / DB: Supabase Auth and Supabase Postgres
-- Execution: Judge0 primary, Piston fallback
-- AI: Groq primary, Gemini fallback
-- Data access: `pg` plus `@supabase/supabase-js`
+---
 
-## What the product does
+## Overview
 
-- Write code in the browser
-- Execute code in a sandboxed backend flow
-- Generate deterministic analysis and pseudocode
-- View execution traces and session history
-- Sign in with Supabase Auth and keep personal work saved
+CodeVista is a browser-based coding environment that pairs a sandboxed execution engine with structured AI analysis. Write code, run it, and get step-by-step traces, pseudocode breakdowns, and session history — all in one place. Authentication and persistence are handled through Supabase so your work is saved across sessions.
 
-## Current Surfaces
+---
 
-- Public pages: `/`, `/about`, `/contact`
-- Auth pages: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`
-- App pages: `/editor`, `/editor/insights`, `/history`, `/settings`
-- Preview-only redesign routes: `/temp-redesign/*`
+## Features
 
-## Repository Layout
+- **In-browser editor** powered by Monaco with syntax highlighting and multi-language support
+- **Sandboxed execution** via Judge0 (primary) with Piston as a fallback
+- **AI-driven analysis** — deterministic pseudocode and execution trace explanations via Groq (primary) and Gemini (fallback)
+- **Session history** — every execution is saved and searchable per user
+- **Auth** — email/password and magic link via Supabase Auth
 
-```text
+---
+
+## Architecture
+
+CodeVista is a monorepo with a clear frontend/backend split.
+
+```
 CodeVista/
-├── frontend/
-├── backend/
-├── docs/
+├── frontend/        # Next.js 15 App Router, React, Tailwind CSS
+├── backend/         # Node.js, Express 5, TypeScript
 └── README.md
 ```
 
-## Documentation Sources
+**Frontend:** Next.js 15 (App Router, server-component-first), React, TypeScript, Tailwind CSS, Monaco Editor, Framer Motion, React Flow.
 
-- [AGENTS.md](./AGENTS.md) - repository operating rules
-- [ARCHITECTURE.md](./ARCHITECTURE.md) - layer map and system boundaries
-- [REQUIREMENTS.md](./REQUIREMENTS.md) - dependency and compliance notes
-- [docs/api/api.md](./docs/api/api.md) - API reference
-- [docs/schema/schema.md](./docs/schema/schema.md) - database schema sync
-- [docs/schema/pii-fields.md](./docs/schema/pii-fields.md) - PII register
-- [docs/ui/design-system.md](./docs/ui/design-system.md) - frontend design system
+**Backend:** Node.js 18+, Express 5, TypeScript. Routes follow a controller → service → integration pattern. Structured logging is provided by a shared logger utility. Supabase service keys are server-side only.
 
-## Local Setup
+**Data:** Supabase Postgres accessed via `pg` and `@supabase/supabase-js`.
 
-Install dependencies in both apps:
+**UI validation:** Agent Browser for browser-driven checks. Playwright is not part of the shipped stack.
+
+### Routes
+
+| Surface | Paths |
+|---|---|
+| Public | `/` `/about` `/contact` |
+| Auth | `/login` `/register` `/forgot-password` `/reset-password` `/auth/callback` |
+| App | `/editor` `/editor/insights` `/history` `/settings` |
+| Preview | `/temp-redesign/*` |
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- A Supabase project
+- Judge0 and Piston instances (self-hosted or managed)
+- Groq and Gemini API keys
+
+### Install
 
 ```bash
-cd backend
-npm install
+# Backend
+cd backend && npm install
 
-cd ../frontend
-npm install
+# Frontend
+cd ../frontend && npm install
 ```
 
-Run the backend:
+### Run (development)
 
 ```bash
-cd backend
-npm run dev
+# Backend — runs on :5000
+cd backend && npm run dev
+
+# Frontend — runs on :3000
+cd frontend && npm run dev
 ```
 
-Run the frontend:
+### Build and verify
 
 ```bash
-cd frontend
-npm run dev
-```
-
-Build and verify:
-
-```bash
+# Backend
 cd backend
 npm run build
 npm run test
 
-cd ../frontend
+# Frontend
+cd frontend
 npm run build
 npm run lint
 ```
+
+---
 
 ## Environment Variables
 
@@ -124,11 +135,8 @@ GEMINI_API_KEY=your_gemini_key
 PORT=5000
 ```
 
-## Implementation Notes
+---
 
-- The frontend uses the App Router and should stay server-component-first.
-- The backend uses Express routes, controllers, services, and integration helpers.
-- Logging should use the structured logger utility already in the backend.
-- Supabase service keys must stay server-side only.
-- Browser-driven UI validation uses Agent Browser; Playwright is not part of the shipped frontend stack.
-- The project is currently personal-session oriented, not org-scoped B2B/B2G.
+## Contributing
+
+This is a personal project under active development. Issues and pull requests are welcome — please open an issue first to discuss significant changes.
