@@ -1,12 +1,19 @@
+<div align="center">
+
 # CodeVista
 
-CodeVista is an education-focused developer intelligence platform for students, interview candidates, and junior engineers. It combines code execution, structured AI analysis, step-by-step tracing, and saved sessions so users can understand code behavior without switching tools.
+**Code execution. Structured AI analysis. Step-by-step visualisation. All in one place.**
 
-The current implementation is a two-app repo:
-- `frontend/` - Next.js App Router frontend
-- `backend/` - Express API service
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://www.typescriptlang.org)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?style=flat-square&logo=node.js&logoColor=white)](https://nodejs.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?style=flat-square&logo=supabase&logoColor=white)](https://supabase.com)
+[![License](https://img.shields.io/badge/License-Educational-blue?style=flat-square)]()
+[![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat-square)]()
 
-## Current Stack
+[Overview](#overview) · [Features](#features) · [Language Support](#language-support) · [Architecture](#architecture) · [Getting Started](#getting-started) · [Design Decisions](#design-decisions) · [Contributing](#contributing)
+
+</div>
 
 - Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS
 - UI / motion: Monaco Editor, Framer Motion, React Flow
