@@ -7,7 +7,9 @@ export const requestPasswordResetHandler = async (
   res: Response
 ) => {
   try {
-    await sendPasswordResetEmail(req.body.email);
+    await sendPasswordResetEmail(req.body.email, {
+      requestOrigin: req.header("origin"),
+    });
 
     return res.status(200).json({
       ok: true,
