@@ -1,7 +1,9 @@
 ﻿"use client";
 
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { Code2, Mail } from "lucide-react";
+import { StatusCard } from "@/components/ui/StatusCard";
 import { useAuth } from "@/lib/auth-context";
 
 const currentYear = new Date().getFullYear();
@@ -48,6 +50,11 @@ export function LandingFooter({
   variant = "legacy",
 }: LandingFooterProps) {
   const { user } = useAuth();
+  const [subscribeEmail, setSubscribeEmail] = useState("");
+  const [subscribeFeedback, setSubscribeFeedback] = useState<{
+    title: string;
+    message: string;
+  } | null>(null);
   const visibleFooterLinks = user
     ? footerLinks
     : footerLinks.map((group) => ({
@@ -57,123 +64,171 @@ export function LandingFooter({
         ),
       }));
 
+  const handleSubscribeSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const form = event.currentTarget;
+
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    const trimmedEmail = subscribeEmail.trim();
+    if (!trimmedEmail) {
+      form.reportValidity();
+      return;
+    }
+
+    setSubscribeFeedback({
+      title: "You're subscribed",
+      message:
+        "Thanks for subscribing. We’ll send product updates and improvements to that email address.",
+    });
+    setSubscribeEmail("");
+  };
+
   if (variant === "site") {
     return (
-      <footer className="mt-auto border-t border-white/10 bg-[#090b0f] text-white">
-        <div className="mx-auto w-full max-w-[1440px] px-4 py-12 sm:px-8 sm:py-14 lg:px-14">
-          <div className="grid gap-10 lg:grid-cols-[1.1fr_1.9fr]">
-            <div>
-              <div className="flex items-center gap-4">
-                <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-slate-950 shadow-[0_14px_28px_rgba(255,255,255,0.08)] sm:h-12 sm:w-12">
-                  <Code2 className="h-5 w-5" />
-                </div>
-                <div className="leading-none">
-                  <p className="text-[16px] font-semibold tracking-[-0.04em] sm:text-[18px]">
-                    CodeVista
-                  </p>
-                  <p className="mt-1 text-[10px] tracking-[0.08em] text-white/60 sm:text-[12px]">
-                    developer intelligence
-                  </p>
-                </div>
-              </div>
-
-              <p className="mt-5 max-w-[360px] text-[14px] leading-[1.8] text-white/75 sm:mt-6 sm:text-[16px]">
-                From writing code to understanding it deeply - all in one
-                intelligent platform.
-              </p>
-
-              <div className="mt-7 flex items-center gap-4 sm:mt-8">
-                <SocialLink
-                  href={githubUrl}
-                  label="GitHub"
-                  icon={<GitHubIcon />}
-                  tone="site"
-                />
-                <SocialLink
-                  href="https://x.com"
-                  label="X"
-                  icon={<XIcon />}
-                  tone="site"
-                />
-                <SocialLink
-                  href={`mailto:${supportEmail}`}
-                  label="Email"
-                  icon={<Mail className="h-5 w-5" />}
-                  tone="site"
-                />
-              </div>
+      <>
+        {subscribeFeedback ? (
+          <div className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center px-4 py-6">
+            <div className="pointer-events-auto w-full max-w-[420px]">
+              <StatusCard
+                tone="success"
+                variant="light"
+                compact
+                title={subscribeFeedback.title}
+                message={subscribeFeedback.message}
+                onDismiss={() => setSubscribeFeedback(null)}
+              />
             </div>
+          </div>
+        ) : null}
 
-            <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-5">
-              {visibleFooterLinks.map((group) => (
-                <details key={group.title} className="group sm:hidden">
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/75 transition hover:bg-white/5 hover:text-white [&::-webkit-details-marker]:hidden">
-                    <span>{group.title}</span>
-                    <span className="text-white/40 transition-transform duration-200 group-open:rotate-45">
-                      +
-                    </span>
-                  </summary>
-                  <div className="mt-3 grid gap-2 pb-2">
-                    {group.items.map((item) => (
-                      <FooterLink
-                        key={item.label}
-                        href={item.href}
-                        label={item.label}
-                        tone="site"
-                      />
-                    ))}
+        <footer className="mt-auto border-t border-white/10 bg-[#090b0f] text-white">
+          <div className="mx-auto w-full max-w-[1440px] px-4 py-12 sm:px-8 sm:py-14 lg:px-14">
+            <div className="grid gap-10 lg:grid-cols-[1.1fr_1.9fr]">
+              <div>
+                <div className="flex items-center gap-4">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-[14px] bg-white text-slate-950 shadow-[0_14px_28px_rgba(255,255,255,0.08)] sm:h-12 sm:w-12">
+                    <Code2 className="h-5 w-5" />
                   </div>
-                </details>
-              ))}
-
-              {visibleFooterLinks.map((group) => (
-                <div key={group.title} className="hidden sm:block">
-                  <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/70">
-                    {group.title}
-                  </p>
-                  <div className="mt-5 grid gap-2">
-                    {group.items.map((item) => (
-                      <FooterLink
-                        key={item.label}
-                        href={item.href}
-                        label={item.label}
-                        tone="site"
-                      />
-                    ))}
+                  <div className="leading-none">
+                    <p className="text-[16px] font-semibold tracking-[-0.04em] sm:text-[18px]">
+                      CodeVista
+                    </p>
+                    <p className="mt-1 text-[10px] tracking-[0.08em] text-white/60 sm:text-[12px]">
+                      developer intelligence
+                    </p>
                   </div>
                 </div>
-              ))}
 
-              <div className="sm:col-span-2 xl:col-span-2">
-                <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/70">
-                  Stay in the loop
-                </p>
-                <p className="mt-5 max-w-[340px] text-[14px] leading-[1.8] text-white/78 sm:text-[15px]">
-                  Get updates about new features and improvements.
+                <p className="mt-5 max-w-[360px] text-[14px] leading-[1.8] text-white/75 sm:mt-6 sm:text-[16px]">
+                  From writing code to understanding it deeply - all in one
+                  intelligent platform.
                 </p>
 
-                <form className="mt-6 flex w-full max-w-[366px] flex-col gap-3 sm:flex-row sm:items-center">
-                  <input
-                    type="email"
-                    placeholder="Enter your email"
-                    className="h-12 w-full rounded-xl border border-white/10 bg-white/10 px-4 text-[14px] text-white placeholder:text-white/40 outline-none transition focus:border-white/20 sm:min-w-0 sm:flex-1 sm:text-[15px]"
+                <div className="mt-7 flex items-center gap-4 sm:mt-8">
+                  <SocialLink
+                    href={githubUrl}
+                    label="GitHub"
+                    icon={<GitHubIcon />}
+                    tone="site"
                   />
-                  <button
-                    type="submit"
-                    className="inline-flex h-12 min-w-[118px] items-center justify-center rounded-xl bg-white px-5 text-[14px] font-medium text-slate-950 transition hover:bg-white/90 sm:shrink-0 sm:text-[15px]"
+                  <SocialLink
+                    href="https://x.com"
+                    label="X"
+                    icon={<XIcon />}
+                    tone="site"
+                  />
+                  <SocialLink
+                    href={`mailto:${supportEmail}`}
+                    label="Email"
+                    icon={<Mail className="h-5 w-5" />}
+                    tone="site"
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-10 sm:grid-cols-2 xl:grid-cols-5">
+                {visibleFooterLinks.map((group) => (
+                  <details key={group.title} className="group sm:hidden">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 rounded-2xl px-3 py-2 text-[12px] font-semibold uppercase tracking-[0.18em] text-white/75 transition hover:bg-white/5 hover:text-white [&::-webkit-details-marker]:hidden">
+                      <span>{group.title}</span>
+                      <span className="text-white/40 transition-transform duration-200 group-open:rotate-45">
+                        +
+                      </span>
+                    </summary>
+                    <div className="mt-3 grid gap-2 pb-2">
+                      {group.items.map((item) => (
+                        <FooterLink
+                          key={item.label}
+                          href={item.href}
+                          label={item.label}
+                          tone="site"
+                        />
+                      ))}
+                    </div>
+                  </details>
+                ))}
+
+                {visibleFooterLinks.map((group) => (
+                  <div key={group.title} className="hidden sm:block">
+                    <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/70">
+                      {group.title}
+                    </p>
+                    <div className="mt-5 grid gap-2">
+                      {group.items.map((item) => (
+                        <FooterLink
+                          key={item.label}
+                          href={item.href}
+                          label={item.label}
+                          tone="site"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                <div className="sm:col-span-2 xl:col-span-2">
+                  <p className="text-[12px] font-semibold uppercase tracking-[0.18em] text-white/70">
+                    Stay in the loop
+                  </p>
+                  <p className="mt-5 max-w-[340px] text-[14px] leading-[1.8] text-white/78 sm:text-[15px]">
+                    Get updates about new features and improvements.
+                  </p>
+
+                  <form
+                    onSubmit={handleSubscribeSubmit}
+                    className="mt-6 flex w-full max-w-[366px] flex-col gap-3 sm:flex-row sm:items-center"
                   >
-                    Subscribe
-                  </button>
-                </form>
+                    <input
+                      type="email"
+                      required
+                      value={subscribeEmail}
+                      onChange={(event) => setSubscribeEmail(event.target.value)}
+                      placeholder="Enter your email"
+                      aria-label="Email address for newsletter subscription"
+                      className="h-12 w-full rounded-xl border border-white/10 bg-white/10 px-4 text-[14px] text-white placeholder:text-white/40 outline-none transition focus:border-white/20 sm:min-w-0 sm:flex-1 sm:text-[15px]"
+                    />
+                    <button
+                      type="submit"
+                      className="inline-flex h-12 min-w-[118px] items-center justify-center rounded-xl bg-white px-5 text-[14px] font-medium text-slate-950 transition hover:bg-white/90 sm:shrink-0 sm:text-[15px]"
+                    >
+                      Subscribe
+                    </button>
+                  </form>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-10 border-t border-white/10 pt-6 text-center text-[13px] text-white/65 sm:mt-12 sm:pt-8 sm:text-[14px]">
-            © {currentYear} CodeVista. All rights reserved.
+            <div className="mt-10 border-t border-white/10 pt-6 text-center text-[13px] text-white/65 sm:mt-12 sm:pt-8 sm:text-[14px]">
+              © {currentYear} CodeVista. All rights reserved.
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </>
     );
   }
 
