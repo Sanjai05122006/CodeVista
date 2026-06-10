@@ -92,12 +92,8 @@ export default function ResetPasswordPage() {
       setMessage("Your password has been updated. You can now sign in.");
       setPassword("");
       setConfirmPassword("");
-    } catch (nextError) {
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to update your password."
-      );
+    } catch {
+      setError("We couldn’t update your password right now. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -123,10 +119,10 @@ export default function ResetPasswordPage() {
           <p className="font-mono-ui mt-4 text-[12px] text-[var(--mute)]">
             New password
           </p>
-          <h1 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+          <h1 className="font-display mt-3 text-[clamp(1.9rem,7vw,32px)] font-semibold tracking-[-1.28px] text-[var(--ink)]">
             Choose a new password.
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-[16px] leading-7 text-[var(--body)]">
+          <p className="mx-auto mt-4 max-w-lg text-[15px] leading-7 text-[var(--body)] sm:text-[16px]">
             Set a new password for your account and then return to the sign-in
             page.
           </p>
@@ -136,7 +132,7 @@ export default function ResetPasswordPage() {
           <div className="mt-8">
             <StatusCard
               tone="info"
-              title="Verifying your reset link..."
+              title="Checking your reset link..."
               message="We are checking that the password reset link is still valid."
             />
           </div>
@@ -145,14 +141,14 @@ export default function ResetPasswordPage() {
             <StatusCard
               tone="warning"
               title="Reset link expired"
-              message="This reset link is invalid or has expired. Request a new password reset link to continue."
+              message="This link is no longer valid. Request a new password reset link to continue."
             />
           </div>
         ) : message ? (
           <div className="mt-8">
             <StatusCard
               tone="success"
-              title="Password updated."
+              title="Password updated"
               message={
                 <span>
                   {message} You will be redirected to sign in shortly.

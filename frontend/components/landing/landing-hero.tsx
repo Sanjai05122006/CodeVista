@@ -17,11 +17,11 @@ export function LandingHero({ user }: { user: User | null }) {
             Developer intelligence platform
           </p>
 
-          <h1 className="font-display mt-8 max-w-4xl text-[40px] font-semibold tracking-[-2px] text-[var(--ink)] sm:text-[48px] sm:leading-[48px]">
+          <h1 className="font-display mt-8 max-w-4xl text-[clamp(1.9rem,7vw,40px)] font-semibold tracking-[-2px] text-[var(--ink)] sm:text-[48px] sm:leading-[48px]">
             Understand what your code is doing.
           </h1>
 
-          <p className="mt-6 max-w-3xl text-[18px] leading-7 text-[var(--body)]">
+          <p className="mt-6 max-w-3xl text-[16px] leading-7 text-[var(--body)] sm:text-[18px]">
             CodeVista brings code execution, structured analysis, runtime
             tracing, and learning history into one workflow. The product is
             built to remove the context-switching tax described in the PRD,

@@ -1,9 +1,13 @@
 import { db, supabaseAdmin } from "../config/db";
-import { env } from "../config/env";
 import { AppError } from "../middleware/error.middleware";
 import { logger } from "../utils/logger";
+import { resolveTrustedFrontendOrigin } from "../utils/frontend-origins";
 
 const PASSWORD_RESET_REDIRECT_PATH = "/reset-password";
+
+type PasswordResetOptions = {
+  requestOrigin?: string | null;
+};
 
 const findUserByEmail = async (email: string) => {
   const normalizedEmail = email.trim().toLowerCase();
@@ -15,7 +19,10 @@ const findUserByEmail = async (email: string) => {
   return result.rows[0] ?? null;
 };
 
-export const sendPasswordResetEmail = async (email: string) => {
+export const sendPasswordResetEmail = async (
+  email: string,
+  options: PasswordResetOptions = {}
+) => {
   const account = await findUserByEmail(email);
 
   if (!account) {
@@ -25,7 +32,8 @@ export const sendPasswordResetEmail = async (email: string) => {
     return;
   }
 
-  const redirectTo = `${env.FRONTEND_URL.replace(/\/+$/, "")}${PASSWORD_RESET_REDIRECT_PATH}`;
+  const redirectOrigin = resolveTrustedFrontendOrigin(options.requestOrigin);
+  const redirectTo = `${redirectOrigin.replace(/\/+$/, "")}${PASSWORD_RESET_REDIRECT_PATH}`;
 
   const { error } = await supabaseAdmin.auth.resetPasswordForEmail(email, {
     redirectTo,

@@ -7,7 +7,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "test": "npm run build && node dist/services/ai.service.test.js && node dist/services/tracing/tracing.service.test.js && node dist/middleware/rateLimit.middleware.test.js"
+    "test": "npm run build && node dist/services/ai.service.test.js && node dist/services/tracing/tracing.service.test.js && node dist/middleware/rateLimit.middleware.test.js && node dist/services/auth.service.test.js && node dist/services/contact.service.test.js"
   },
   "keywords": [],
   "author": "",

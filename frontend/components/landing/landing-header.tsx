@@ -23,7 +23,7 @@ const navItems = [
 
 type LandingHeaderProps = {
   user: User | null;
-  variant?: "legacy" | "landing";
+  variant?: "legacy" | "landing" | "site";
 };
 
 export function LandingHeader({
@@ -32,11 +32,73 @@ export function LandingHeader({
 }: LandingHeaderProps) {
   const router = useRouter();
   const { signOut } = useAuth();
+  const visibleNavItems = user
+    ? navItems
+    : navItems.filter((item) => item.href !== "/history");
 
   const handleSignOut = async () => {
     await signOut();
     router.replace("/");
   };
+
+  if (variant === "site") {
+    return (
+      <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur-sm">
+        <div className="mx-auto flex h-[72px] w-full max-w-[1440px] items-center justify-between px-4 sm:h-[84px] sm:px-8 lg:px-14">
+          <Link href="/" className="flex items-center gap-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-[14px] bg-slate-950 text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] sm:h-11 sm:w-11">
+              <Code2 className="h-5 w-5" strokeWidth={2.4} />
+            </div>
+            <div className="leading-none">
+              <p className="text-[16px] font-semibold tracking-[-0.04em] text-slate-950 sm:text-[18px]">
+                CodeVista
+              </p>
+              <p className="mt-1 text-[10px] tracking-[0.08em] text-slate-500 sm:text-[12px]">
+                developer intelligence
+              </p>
+            </div>
+          </Link>
+
+          <nav className="hidden items-center gap-3 lg:flex">
+            {visibleNavItems.map((item) => (
+              <SiteNavLink key={item.href} href={item.href}>
+                {item.label}
+              </SiteNavLink>
+            ))}
+          </nav>
+
+          <div className="flex items-center gap-2">
+            {user ? (
+              <SiteAccountMenu user={user} onSignOut={handleSignOut} />
+            ) : (
+              <>
+                <div className="flex items-center gap-2 max-[389px]:hidden">
+                  <Link
+                    href="/login"
+                    className="inline-flex h-10 items-center rounded-full border border-slate-200 bg-white px-4 text-[13px] font-medium text-slate-950 shadow-[0_12px_28px_rgba(15,23,42,0.04)] transition hover:border-slate-300 hover:bg-slate-50 sm:h-11 sm:px-5 sm:text-[14px]"
+                  >
+                    Sign in
+                  </Link>
+                  <Link
+                    href="/register"
+                    className="inline-flex h-10 items-center rounded-full bg-slate-950 px-4 text-[13px] font-medium text-white shadow-[0_18px_36px_rgba(15,23,42,0.22)] transition hover:bg-slate-900 sm:h-11 sm:px-5 sm:text-[14px]"
+                  >
+                    Sign up
+                  </Link>
+                </div>
+                <Link
+                  href="/login"
+                  className="hidden h-10 items-center rounded-full bg-slate-950 px-4 text-[13px] font-medium text-white shadow-[0_18px_36px_rgba(15,23,42,0.22)] transition hover:bg-slate-900 max-[389px]:inline-flex"
+                >
+                  Get started
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   if (variant === "landing") {
     return (
@@ -47,17 +109,17 @@ export function LandingHeader({
               <Code2 size={16} />
             </div>
             <div>
-              <p className="font-display text-[18px] font-semibold tracking-[-0.54px] text-[var(--ink)]">
+              <p className="font-display text-[16px] font-semibold tracking-[-0.54px] text-[var(--ink)] sm:text-[18px]">
                 CodeVista
               </p>
-              <p className="font-mono-ui text-[12px] text-[var(--mute)]">
+              <p className="font-mono-ui text-[11px] text-[var(--mute)] sm:text-[12px]">
                 developer intelligence
               </p>
             </div>
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <LandingNavLink key={item.href} href={item.href}>
                 {item.label}
               </LandingNavLink>
@@ -88,7 +150,7 @@ export function LandingHeader({
 
         <div className="border-t border-[var(--hairline)] lg:hidden">
           <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center gap-2 px-6 py-3">
-            {navItems.map((item) => (
+            {visibleNavItems.map((item) => (
               <LandingNavLink key={item.href} href={item.href}>
                 {item.label}
               </LandingNavLink>
@@ -127,17 +189,17 @@ export function LandingHeader({
             <Code2 size={18} />
           </div>
           <div>
-            <p className="text-lg font-semibold tracking-tight text-[var(--ink)]">
+            <p className="text-[16px] font-semibold tracking-tight text-[var(--ink)] sm:text-lg">
               CodeVista
             </p>
-            <p className="text-xs uppercase tracking-[0.22em] text-[var(--mute)]">
+            <p className="text-[11px] uppercase tracking-[0.22em] text-[var(--mute)] sm:text-xs">
               Learn code visually
             </p>
           </div>
         </Link>
 
         <nav className="hidden items-center rounded-full border border-white/70 bg-white/80 px-3 py-2 shadow-[0_14px_34px_rgba(15,23,42,0.08)] backdrop-blur lg:flex">
-          {navItems.map((item) => (
+          {visibleNavItems.map((item) => (
             <HeaderNavLink key={item.href} href={item.href}>
               {item.label}
             </HeaderNavLink>
@@ -167,7 +229,7 @@ export function LandingHeader({
       </div>
 
       <nav className="flex flex-wrap items-center gap-2 rounded-[20px] border border-white/70 bg-white/80 p-3 shadow-[0_14px_34px_rgba(15,23,42,0.06)] backdrop-blur lg:hidden">
-        {navItems.map((item) => (
+        {visibleNavItems.map((item) => (
           <HeaderNavLink key={item.href} href={item.href}>
             {item.label}
           </HeaderNavLink>
@@ -277,6 +339,69 @@ function LandingMenuLink({
       {icon}
       {children}
     </Link>
+  );
+}
+
+function SiteNavLink({
+  href,
+  children,
+}: {
+  href: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group relative px-5 py-3 text-[16px] font-medium text-slate-950 transition hover:text-slate-600"
+    >
+      {children}
+      <span className="absolute inset-x-5 -bottom-1 h-[2px] scale-x-0 rounded-full bg-slate-950 transition-transform duration-200 group-hover:scale-x-100" />
+    </Link>
+  );
+}
+
+function SiteAccountMenu({
+  user,
+  onSignOut,
+}: {
+  user: User;
+  onSignOut: () => Promise<void>;
+}) {
+  return (
+    <details className="group relative">
+      <summary className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-full bg-slate-950 text-[15px] font-medium text-white shadow-[0_14px_28px_rgba(15,23,42,0.22)] sm:h-11 sm:w-11 [&::-webkit-details-marker]:hidden">
+        {getUserInitial(user)}
+      </summary>
+
+      <div className="absolute right-0 z-20 mt-3 w-56 rounded-3xl border border-slate-200 bg-white p-2 shadow-[0_24px_60px_rgba(15,23,42,0.14)] opacity-0 pointer-events-none transition duration-150 group-open:opacity-100 group-open:pointer-events-auto group-hover:opacity-100 group-hover:pointer-events-auto">
+        <div className="rounded-2xl bg-slate-50 px-4 py-3">
+          <p className="text-sm font-semibold text-slate-950">
+            {user.user_metadata?.display_name || "Signed in"}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">{user.email}</p>
+        </div>
+
+        <div className="mt-2 grid gap-1">
+          <Link
+            href="/settings"
+            className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+          >
+            <Settings size={16} />
+            Settings
+          </Link>
+          <button
+            type="button"
+            onClick={() => {
+              void onSignOut();
+            }}
+            className="flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-left text-sm font-medium text-slate-600 transition hover:bg-slate-50 hover:text-slate-950"
+          >
+            <LogOut size={16} />
+            Sign out
+          </button>
+        </div>
+      </div>
+    </details>
   );
 }
 

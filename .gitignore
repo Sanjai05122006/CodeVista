@@ -81,3 +81,8 @@ backend/sql/
 frontend/e2e/
 frontend/playwright.config.ts
 frontend/test-results/
+frontend/temp-redesign/
+frontend/app/temp-redesign/
+.agents/
+.codex/
+docs/

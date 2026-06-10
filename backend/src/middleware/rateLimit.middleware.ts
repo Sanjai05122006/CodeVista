@@ -37,6 +37,11 @@ export const MAX_LANGUAGE_LENGTH = 32;
 export const MAX_EMAIL_LENGTH = 320;
 export const MAX_STDIN_LENGTH = 2_000;
 export const MAX_CHAT_MESSAGE_LENGTH = 4_000;
+export const MAX_CONTACT_SUBJECT_LENGTH = 120;
+export const MAX_CONTACT_ERROR_CODE_LENGTH = 120;
+export const MAX_CONTACT_MESSAGE_LENGTH = 5_000;
+export const MAX_CONTACT_PROVIDER_MESSAGE_LENGTH = 500;
+export const MAX_CONTACT_NAME_LENGTH = 120;
 export const MAX_CHAT_HISTORY_MESSAGES = 20;
 export const MAX_CHAT_BATCH_MESSAGES = 50;
 export const MAX_CHAT_TITLE_LENGTH = 120;
@@ -48,6 +53,8 @@ export const MAX_OUTPUT_LENGTH = 8_000;
 export const MAX_TRACE_ITEMS = 500;
 export const MAX_ALGORITHM_STEPS = 50;
 export const MAX_ALGORITHM_NAME_LENGTH = 120;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const CONTACT_SUBJECT_FALLBACK = "CodeVista support request";
 
 const safeTrim = (value: string) => value.trim();
 
@@ -331,15 +338,133 @@ export const validatePasswordResetRequest = (
     });
 
     const email = String(req.body.email);
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-    if (!emailPattern.test(email)) {
+    if (!EMAIL_PATTERN.test(email)) {
       throw new AppError(
         "INVALID_REQUEST_BODY",
         400,
         "email must be a valid email address."
       );
     }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const validateContactLogRequest = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    assertObjectBody(req);
+    validateTrimmedString(req, {
+      field: "status",
+      maxLength: 16,
+    });
+    validateTrimmedString(req, {
+      field: "subject",
+      maxLength: MAX_CONTACT_SUBJECT_LENGTH,
+    });
+
+    if (req.body.status !== "success" && req.body.status !== "error") {
+      throw new AppError(
+        "INVALID_REQUEST_BODY",
+        400,
+        "status must be success or error."
+      );
+    }
+
+    if (
+      typeof req.body.message_length !== "number" ||
+      !Number.isInteger(req.body.message_length) ||
+      req.body.message_length < 0 ||
+      req.body.message_length > MAX_CONTACT_MESSAGE_LENGTH
+    ) {
+      throw new AppError(
+        "INVALID_REQUEST_BODY",
+        400,
+        "message_length must be a valid integer."
+      );
+    }
+
+    if (req.body.provider_status != null) {
+      if (
+        typeof req.body.provider_status !== "number" ||
+        !Number.isInteger(req.body.provider_status) ||
+        req.body.provider_status < 100 ||
+        req.body.provider_status > 599
+      ) {
+        throw new AppError(
+          "INVALID_REQUEST_BODY",
+          400,
+          "provider_status must be a valid HTTP status code."
+        );
+      }
+    }
+
+    if (req.body.provider_message != null) {
+      validateTrimmedString(req, {
+        field: "provider_message",
+        maxLength: MAX_CONTACT_PROVIDER_MESSAGE_LENGTH,
+        required: false,
+      });
+    }
+
+    if (req.body.error_code != null) {
+      validateTrimmedString(req, {
+        field: "error_code",
+        maxLength: MAX_CONTACT_ERROR_CODE_LENGTH,
+        required: false,
+      });
+    }
+
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const validateContactSendRequest = (
+  req: Request,
+  _res: Response,
+  next: NextFunction
+) => {
+  try {
+    assertObjectBody(req);
+    validateTrimmedString(req, {
+      field: "name",
+      maxLength: MAX_CONTACT_NAME_LENGTH,
+    });
+    validateTrimmedString(req, {
+      field: "email",
+      maxLength: MAX_EMAIL_LENGTH,
+    });
+    validateTrimmedString(req, {
+      field: "message",
+      maxLength: MAX_CONTACT_MESSAGE_LENGTH,
+    });
+    validateTrimmedString(req, {
+      field: "subject",
+      maxLength: MAX_CONTACT_SUBJECT_LENGTH,
+      required: false,
+    });
+
+    const email = String(req.body.email);
+
+    if (!EMAIL_PATTERN.test(email)) {
+      throw new AppError(
+        "INVALID_REQUEST_BODY",
+        400,
+        "email must be a valid email address."
+      );
+    }
+
+    req.body.subject =
+      typeof req.body.subject === "string" && req.body.subject.trim()
+        ? req.body.subject.trim()
+        : CONTACT_SUBJECT_FALLBACK;
 
     next();
   } catch (error) {
@@ -793,10 +918,22 @@ export const expensiveEndpointRateLimits = {
     authenticatedLimit: 20,
     windowMs: 60_000,
   }),
+  contactSend: createRateLimitMiddleware({
+    name: "contact-send",
+    anonymousLimit: 5,
+    authenticatedLimit: 10,
+    windowMs: 15 * 60_000,
+  }),
   passwordResetRequest: createRateLimitMiddleware({
     name: "password-reset-request",
     anonymousLimit: 3,
     authenticatedLimit: 5,
+    windowMs: 15 * 60_000,
+  }),
+  contactLog: createRateLimitMiddleware({
+    name: "contact",
+    anonymousLimit: 5,
+    authenticatedLimit: 10,
     windowMs: 15 * 60_000,
   }),
   sessionSave: createRateLimitMiddleware({

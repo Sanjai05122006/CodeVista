@@ -15,122 +15,102 @@
 
 </div>
 
----
+- Frontend: Next.js 16, React 19, TypeScript, Tailwind CSS
+- UI / motion: Monaco Editor, Framer Motion, React Flow
+- UI testing: Agent Browser for browser-driven UI checks
+- Backend: Node.js, Express 5, TypeScript
+- Validation: Zod
+- Auth / DB: Supabase Auth and Supabase Postgres
+- Execution: Judge0 primary, Piston fallback
+- AI: Groq primary, Gemini fallback
+- Data access: `pg` plus `@supabase/supabase-js`
 
-## Overview
+## What the product does
 
-CodeVista is a developer intelligence platform for students, interview candidates, and junior engineers who want to *understand* code — not just run it.
+- Write code in the browser
+- Execute code in a sandboxed backend flow
+- Generate deterministic analysis and pseudocode
+- View execution traces and session history
+- Sign in with Supabase Auth and keep personal work saved
 
-Today, understanding code at runtime requires five separate tools: an editor, a runner, an AI explainer, a visualiser, and something to save context between sessions. **CodeVista collapses all five into one environment.**
+## Current Surfaces
 
-Write code, execute it in a real sandbox, receive deterministic AI-powered pseudocode and complexity analysis, watch it execute step by step with live variable state and call stack, ask follow-up questions in context, and return to the same session the next day.
+- Public pages: `/`, `/about`, `/contact`
+- Auth pages: `/login`, `/register`, `/forgot-password`, `/reset-password`, `/auth/callback`
+- App pages: `/editor`, `/editor/insights`, `/history`, `/settings`
+- Preview-only redesign routes: `/temp-redesign/*`
 
----
+## Repository Layout
 
-## Features
-
-- **Monaco editor** — browser-based editor with syntax highlighting and language support
-- **Sandboxed execution** — runs real code against Judge0 (primary) with Piston fallback
-- **Structured AI analysis** — deterministic pseudocode, algorithm breakdown, and Big-O complexity
-- **Step-by-step visualiser** — execution trace with variable state and call stack at each step
-- **Contextual AI chat** — follow-up questions grounded in the current code and execution context
-- **Session persistence** — revisit past sessions and replay execution traces
-
----
-
-## Language Support
-
-| Language | Execution | AI Analysis | Execution Trace |
-|---|---|---|---|
-| Python | ✅ | ✅ | Full |
-| JavaScript | ✅ | ✅ | Partial |
-| C++ | ✅ | ✅ | Full |
-
----
-
-## Tech Stack
-
-**Frontend** — Next.js · TypeScript · Tailwind CSS · React Flow · Framer Motion
-
-**Backend** — Node.js · Express · TypeScript · Redis
-
-**Infrastructure** — Supabase (PostgreSQL + Auth) · Judge0 / Piston · Groq / Gemini
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Browser                             │
-│                    Next.js Frontend                         │
-│                                                             │
-│   Monaco Editor  │  Step Visualiser  │  AI Chat Panel      │
-└─────────────────────────────┬───────────────────────────────┘
-                              │ HTTP / REST
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                 Node.js + Express Backend                   │
-│                                                             │
-│  Execution Service → Judge0 (primary) / Piston (fallback)  │
-│  AI Service        → Groq / Gemini (fallback)              │
-│  Chat Service      → stateless, context-aware              │
-│  Cache Layer       → Redis (analysis + execution results)  │
-└─────────────────────────────┬───────────────────────────────┘
-                              │
-               ┌──────────────┴──────────────┐
-               ▼                             ▼
-        Judge0 / Piston             Supabase (PostgreSQL)
-```
-
-### Repository Structure
-
-```
-codevista/
+```text
+CodeVista/
 ├── frontend/
-│   ├── app/
-│   ├── components/
-│   ├── hooks/
-│   └── lib/
-└── backend/
-    └── src/
-        ├── controllers/
-        ├── services/
-        ├── integrations/
-        ├── routes/
-        ├── middleware/
-        └── config/
+├── backend/
+├── docs/
+└── README.md
 ```
 
----
+## Documentation Sources
 
-## Getting Started
+- [AGENTS.md](./AGENTS.md) - repository operating rules
+- [ARCHITECTURE.md](./ARCHITECTURE.md) - layer map and system boundaries
+- [REQUIREMENTS.md](./REQUIREMENTS.md) - dependency and compliance notes
+- [docs/api/api.md](./docs/api/api.md) - API reference
+- [docs/schema/schema.md](./docs/schema/schema.md) - database schema sync
+- [docs/schema/pii-fields.md](./docs/schema/pii-fields.md) - PII register
+- [docs/ui/design-system.md](./docs/ui/design-system.md) - frontend design system
 
-### Prerequisites
+## Local Setup
 
-- Node.js v18+
-- A [Supabase](https://supabase.com) project
-- Judge0 and Piston endpoints (self-hosted or managed)
-- Groq and Gemini API keys
-
-### 1. Clone the repository
+Install dependencies in both apps:
 
 ```bash
-git clone https://github.com/Sanjai05122006/codevista.git
-cd codevista
+cd backend
+npm install
+
+cd ../frontend
+npm install
 ```
 
-### 2. Configure environment variables
+Run the backend:
 
-**Frontend** — `frontend/.env.local`:
+```bash
+cd backend
+npm run dev
+```
+
+Run the frontend:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Build and verify:
+
+```bash
+cd backend
+npm run build
+npm run test
+
+cd ../frontend
+npm run build
+npm run lint
+```
+
+## Environment Variables
+
+### `frontend/.env.local`
 
 ```env
 NEXT_PUBLIC_API_URL=http://localhost:5000/api
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPPORT_EMAIL=you@example.com
+NEXT_PUBLIC_GITHUB_URL=https://github.com/your-handle
 ```
 
-**Backend** — `backend/.env`:
+### `backend/.env`
 
 ```env
 FRONTEND_URL=http://localhost:3000
@@ -144,52 +124,11 @@ GEMINI_API_KEY=your_gemini_key
 PORT=5000
 ```
 
-### 3. Start the backend
+## Implementation Notes
 
-```bash
-cd backend
-npm install
-npm run dev
-```
-
-### 4. Start the frontend
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Open [http://localhost:3000](http://localhost:3000).
-
----
-
-## Design Decisions
-
-**Deterministic AI output** — every analysis request uses `temperature=0`, JSON schema validation, and a Redis cache keyed by `SHA-256(code + language)`. The same code always produces the same pseudocode and complexity breakdown. This eliminates drift and makes AI output reliable enough to display without human review.
-
-**Cache-first** — analysis results are cached for 24 hours; execution results for 1 hour. At scale, repeated analysis of common patterns (sorting algorithms, recursion examples) is the single largest cost and latency lever.
-
-**Fault-tolerant execution** — Judge0 is the primary runner. On failure or timeout, the system falls back to Piston automatically. No user-facing error on transient infrastructure issues.
-
-**Stateless chat** — the chat service holds no server-side session state. The frontend sends full conversation history with every request, keeping the backend stateless and horizontally scalable without sticky sessions.
-
----
-
-## Contributing
-
-Contributions are welcome. For significant changes, open an issue first to discuss the proposed improvement before submitting a pull request. Bug fixes and documentation improvements can be submitted directly.
-
-Please follow the existing code style and ensure any new API routes are covered by integration tests.
-
----
-
-## License
-
-This project is intended for educational and developer tooling purposes.
-
----
-
-<div align="center">
-<sub>Built to simplify how developers understand code execution and runtime behaviour.</sub>
-</div>
+- The frontend uses the App Router and should stay server-component-first.
+- The backend uses Express routes, controllers, services, and integration helpers.
+- Logging should use the structured logger utility already in the backend.
+- Supabase service keys must stay server-side only.
+- Browser-driven UI validation uses Agent Browser; Playwright is not part of the shipped frontend stack.
+- The project is currently personal-session oriented, not org-scoped B2B/B2G.

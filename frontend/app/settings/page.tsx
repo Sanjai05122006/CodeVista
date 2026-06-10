@@ -53,7 +53,7 @@ export default function SettingsPage() {
               <Shield size={15} />
               Settings
             </div>
-            <h1 className="font-display mt-5 text-4xl font-semibold tracking-[-1.28px] text-[var(--ink)]">
+            <h1 className="font-display mt-5 text-[clamp(1.75rem,6vw,2.25rem)] font-semibold tracking-[-1.28px] text-[var(--ink)]">
               Your account space.
             </h1>
             <p className="mt-4 text-base leading-8 text-[var(--body)]">
@@ -67,7 +67,7 @@ export default function SettingsPage() {
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--canvas-soft)] text-[var(--ink)]">
                 <UserRound size={20} />
               </div>
-              <h2 className="font-display mt-5 text-2xl font-semibold tracking-[-0.72px] text-[var(--ink)]">
+              <h2 className="font-display mt-5 text-[clamp(1.25rem,4vw,1.5rem)] font-semibold tracking-[-0.72px] text-[var(--ink)]">
                 Account overview
               </h2>
               <div className="mt-6 grid gap-4">
@@ -99,7 +99,7 @@ export default function SettingsPage() {
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[var(--hairline)] bg-[var(--canvas-soft)] text-[var(--ink)]">
                     {card.icon}
                   </div>
-                  <h2 className="font-display mt-5 text-xl font-semibold tracking-[-0.54px] text-[var(--ink)]">
+                  <h2 className="font-display mt-5 text-[clamp(1.125rem,4vw,1.25rem)] font-semibold tracking-[-0.54px] text-[var(--ink)]">
                     {card.title}
                   </h2>
                   <p className="mt-3 text-sm leading-7 text-[var(--body)]">
