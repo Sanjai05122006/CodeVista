@@ -2,30 +2,26 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getSessionSafely } from "@/lib/auth-session";
+import { useAuth } from "@/lib/auth-context";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
+  const { session, loading } = useAuth();
 
   useEffect(() => {
-    let mounted = true;
-
-    void getSessionSafely().then(({ session }) => {
-      if (!mounted) {
-        return;
-      }
-
+    if (!loading) {
       router.replace(session ? "/" : "/login");
-    });
-
-    return () => {
-      mounted = false;
-    };
-  }, [router]);
+    }
+  }, [loading, router, session]);
 
   return (
-    <main className="min-h-screen flex items-center justify-center bg-[var(--canvas-soft)] text-sm text-[var(--body)]">
-      Completing sign in...
+    <main className="flex min-h-screen items-center justify-center bg-[var(--canvas-soft)] px-6">
+      <div className="rounded-2xl border border-[var(--hairline)] bg-white px-8 py-6 text-center shadow-sm">
+        <p className="text-sm font-medium text-[var(--ink)]">Completing sign in...</p>
+        <p className="mt-2 text-sm text-[var(--body)]">
+          Please wait while we restore your session.
+        </p>
+      </div>
     </main>
   );
 }

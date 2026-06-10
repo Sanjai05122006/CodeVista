@@ -107,15 +107,16 @@ export default function RegisterPage() {
       if (error) {
         setFeedback({
           tone: "error",
-          title: "Registration failed",
-          message: error.message,
+          title: "We couldn’t create your account",
+          message:
+            "Please check your details and try again.",
         });
         return;
       }
 
       setFeedback({
         tone: "success",
-        title: "Account created",
+        title: "Your account is ready",
         message:
           "Check your email if confirmation is required. Redirecting you to sign in.",
       });
@@ -141,8 +142,9 @@ export default function RegisterPage() {
       if (error) {
         setFeedback({
           tone: "error",
-          title: "Google sign-up failed",
-          message: error.message,
+          title: "We couldn’t continue with Google",
+          message:
+            "Please try again or use your email and password instead.",
         });
       }
     } finally {
@@ -200,13 +202,13 @@ function LeftPanel() {
       <div className="relative z-10">
         <div className="flex items-center gap-4">
           <CodeMark />
-          <p className="text-[24px] font-semibold tracking-[-0.06em] text-slate-950">
+          <p className="text-[16px] font-semibold tracking-[-0.06em] text-slate-950 sm:text-[20px]">
             CodeVista
           </p>
         </div>
 
         <div className="mt-[15px] max-w-[640px]">
-          <h1 className="text-[60px] font-semibold leading-[1.04] tracking-[-0.07em] text-slate-950">
+          <h1 className="text-[clamp(1.75rem,5vw,2.125rem)] font-semibold leading-[1.04] tracking-[-0.07em] text-slate-950">
             The modern way
             <br />
             to code and understand.
@@ -287,22 +289,22 @@ function RightPanel({
         <div className="lg:hidden">
           <div className="flex items-center gap-4">
             <CodeMark />
-            <p className="text-[24px] font-semibold tracking-[-0.06em] text-slate-950">
-              CodeVista
-            </p>
+          <p className="text-[16px] font-semibold tracking-[-0.06em] text-slate-950 sm:text-[20px]">
+            CodeVista
+          </p>
           </div>
         </div>
 
         <div className="pt-2 lg:pt-0">
-          <h2 className="text-center text-[42px] font-semibold tracking-[-0.06em] text-slate-950">
+          <h2 className="text-center text-[clamp(1.75rem,5vw,2.125rem)] font-semibold tracking-[-0.06em] text-slate-950">
             Create your account
           </h2>
-          <p className="mt-3 text-center text-[14px] text-[#6b7280]">
+          <p className="mt-3 text-center text-[14px] text-[#6b7280] sm:text-[15px]">
             Join CodeVista and get started for free.
           </p>
 
           <form
-            className="mt-8 space-y-4"
+            className="mt-7 space-y-4 sm:mt-8"
             onSubmit={onSubmit}
           >
             <Field label="Full name" icon={<User className="h-5 w-5" />}>
@@ -313,7 +315,7 @@ function RightPanel({
                 autoComplete="name"
                 value={fullName}
                 onChange={(event) => onFullNameChange(event.target.value)}
-                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+                className="h-full w-full bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-[#94a3b8] sm:text-[15px]"
               />
             </Field>
 
@@ -325,7 +327,7 @@ function RightPanel({
                 autoComplete="email"
                 value={email}
                 onChange={(event) => onEmailChange(event.target.value)}
-                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+                className="h-full w-full bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-[#94a3b8] sm:text-[15px]"
               />
             </Field>
 
@@ -346,11 +348,11 @@ function RightPanel({
                 autoComplete="new-password"
                 value={password}
                 onChange={(event) => onPasswordChange(event.target.value)}
-                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+                className="h-full w-full bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-[#94a3b8] sm:text-[15px]"
               />
             </Field>
 
-            <p className="mt-[-1px] text-[14px] text-[#6b7280]">
+            <p className="mt-[-1px] text-[13px] text-[#6b7280] sm:text-[14px]">
               At least 8 characters
             </p>
 
@@ -371,21 +373,21 @@ function RightPanel({
                 autoComplete="new-password"
                 value={confirmPassword}
                 onChange={(event) => onConfirmPasswordChange(event.target.value)}
-                className="h-full w-full bg-transparent text-[15px] text-slate-900 outline-none placeholder:text-[#94a3b8]"
+                className="h-full w-full bg-transparent text-[14px] text-slate-900 outline-none placeholder:text-[#94a3b8] sm:text-[15px]"
               />
             </Field>
 
             <button
               type="submit"
               disabled={submitting}
-              className="flex h-[58px] w-full items-center justify-center rounded-[16px] bg-[linear-gradient(180deg,#0f1726_0%,#060b14_100%)] text-[14px] font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.22)] transition hover:brightness-110 disabled:opacity-60"
+              className="flex h-[56px] w-full items-center justify-center rounded-[16px] bg-[linear-gradient(180deg,#0f1726_0%,#060b14_100%)] text-[14px] font-semibold text-white shadow-[0_18px_36px_rgba(15,23,42,0.22)] transition hover:brightness-110 disabled:opacity-60 sm:h-[58px]"
             >
               Create account
             </button>
 
             <div className="flex items-center gap-4 pt-1 text-[#94a3b8]">
               <div className="h-px flex-1 bg-[#e2e8f0]" />
-              <span className="text-[16px]">or</span>
+              <span className="text-[14px] sm:text-[15px]">or</span>
               <div className="h-px flex-1 bg-[#e2e8f0]" />
             </div>
 
@@ -393,7 +395,7 @@ function RightPanel({
               type="button"
               onClick={onGoogle}
               disabled={submitting}
-              className="flex h-[58px] w-full items-center justify-center gap-3 rounded-[16px] border border-[#d6dbea] bg-white text-[14px] font-medium text-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 disabled:opacity-60"
+              className="flex h-[56px] w-full items-center justify-center gap-3 rounded-[16px] border border-[#d6dbea] bg-white text-[14px] font-medium text-slate-900 shadow-[0_10px_24px_rgba(15,23,42,0.04)] transition hover:bg-slate-50 disabled:opacity-60 sm:h-[58px]"
             >
               <GoogleMark />
               Sign up with Google
@@ -414,7 +416,7 @@ function RightPanel({
               </div>
             ) : null}
 
-            <p className="pt-2 text-center text-[14px] text-[#6b7280]">
+            <p className="pt-2 text-center text-[13px] text-[#6b7280] sm:text-[14px]">
               Already have an account?{" "}
               <Link
                 href="/login"
@@ -443,8 +445,8 @@ function Field({
 }) {
   return (
     <label className="grid gap-2.5">
-      <span className="text-[18px] font-semibold text-slate-950">{label}</span>
-      <div className="flex h-[68px] items-center gap-4 rounded-[16px] border border-[#d6dbea] bg-white px-5 shadow-[0_10px_24px_rgba(15,23,42,0.03)]">
+      <span className="text-[15px] font-semibold text-slate-950 sm:text-[16px]">{label}</span>
+      <div className="flex h-[62px] items-center gap-4 rounded-[16px] border border-[#d6dbea] bg-white px-4 shadow-[0_10px_24px_rgba(15,23,42,0.03)] sm:h-[68px] sm:px-5">
         <div className="shrink-0 text-[#64748b]">{icon}</div>
         <div className="min-w-0 flex-1">{children}</div>
         {trailing ? <div className="text-[#64748b]">{trailing}</div> : null}

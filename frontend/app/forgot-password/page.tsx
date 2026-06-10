@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
     setError(null);
 
     if (!email.trim()) {
-      setError("Enter your email address.");
+      setError("Enter the email address for your CodeVista account.");
       return;
     }
 
@@ -29,12 +29,8 @@ export default function ForgotPasswordPage() {
         response.message ||
           "If that email is registered, a password reset link has been sent."
       );
-    } catch (nextError) {
-      setError(
-        nextError instanceof Error
-          ? nextError.message
-          : "Unable to request password reset."
-      );
+    } catch {
+      setError("We couldn’t send the reset link right now. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -58,10 +54,10 @@ export default function ForgotPasswordPage() {
           <p className="font-mono-ui mt-4 text-[12px] text-[var(--mute)]">
             Password reset
           </p>
-          <h1 className="font-display mt-3 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+          <h1 className="font-display mt-3 text-[clamp(1.9rem,7vw,32px)] font-semibold tracking-[-1.28px] text-[var(--ink)]">
             Reset your password.
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-[16px] leading-7 text-[var(--body)]">
+          <p className="mx-auto mt-4 max-w-lg text-[15px] leading-7 text-[var(--body)] sm:text-[16px]">
             Enter the email address you use for CodeVista and we will send you a
             reset link.
           </p>
@@ -71,12 +67,13 @@ export default function ForgotPasswordPage() {
           <div className="mt-8">
             <StatusCard
               tone="success"
-              title="Reset link sent."
+              title="Check your inbox"
               message={
                 <span>
                   {message} Check your inbox and open the link to continue.
                 </span>
               }
+              onDismiss={() => setMessage(null)}
             />
           </div>
         ) : (
@@ -99,8 +96,9 @@ export default function ForgotPasswordPage() {
               <StatusCard
                 tone="error"
                 compact
-                title="Unable to continue"
+                title="We couldn’t send the reset link"
                 message={error}
+                onDismiss={() => setError(null)}
               />
             ) : null}
 
