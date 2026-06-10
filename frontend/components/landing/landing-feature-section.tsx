@@ -37,10 +37,10 @@ export function LandingFeatureSection() {
             <p className="font-mono-ui text-[12px] text-[var(--mute)]">
               UI direction for this migration
             </p>
-            <h2 className="font-display mt-4 text-[32px] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+            <h2 className="font-display mt-4 text-[clamp(1.75rem,6vw,2rem)] font-semibold tracking-[-1.28px] text-[var(--ink)]">
               One workflow instead of five tabs.
             </h2>
-            <p className="mt-4 text-[16px] leading-7 text-[var(--body)]">
+            <p className="mt-4 text-[15px] leading-7 text-[var(--body)] sm:text-[16px]">
               The repo’s product context is consistent: CodeVista is not just a
               code runner. It is an editor, execution layer, AI analysis
               surface, visualizer, and learning history system. The landing page
@@ -72,10 +72,10 @@ export function LandingFeatureSection() {
               <p className="font-mono-ui text-[12px] text-[var(--mute)]">
                 {card.eyebrow}
               </p>
-              <h3 className="font-display mt-4 text-[24px] font-semibold tracking-[-0.96px] text-[var(--ink)]">
+              <h3 className="font-display mt-4 text-[clamp(1.25rem,4.5vw,1.5rem)] font-semibold tracking-[-0.96px] text-[var(--ink)]">
                 {card.title}
               </h3>
-              <p className="mt-3 text-sm leading-7 text-[var(--body)]">
+              <p className="mt-3 text-[13px] leading-6 text-[var(--body)] sm:text-sm sm:leading-7">
                 {card.description}
               </p>
             </article>
@@ -88,11 +88,11 @@ export function LandingFeatureSection() {
               <p className="font-mono-ui text-[12px] text-white/55">
                 Next migration path
               </p>
-              <h2 className="font-display mt-4 text-[32px] font-semibold tracking-[-1.28px] text-white">
+              <h2 className="font-display mt-4 text-[clamp(1.75rem,6vw,2rem)] font-semibold tracking-[-1.28px] text-white">
                 If this page is approved, the same system can be applied to the
                 rest of the public surface and then the app shell.
               </h2>
-              <p className="mt-4 text-[16px] leading-7 text-white/72">
+              <p className="mt-4 text-[15px] leading-7 text-white/72 sm:text-[16px]">
                 The repo still contains the earlier violet-gradient language on
                 login, register, about, contact, history, settings, and the
                 editor shell. This landing page is now the first controlled
