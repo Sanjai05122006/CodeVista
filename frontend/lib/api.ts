@@ -192,7 +192,7 @@ async function authorizedJsonFetch<T>(
     } catch (error) {
       const isNetworkError = error instanceof TypeError;
       const message = isNetworkError
-        ? `Network error while calling ${requestUrl}. Check backend availability and CORS configuration.`
+        ? "We couldn’t reach the service right now. Please try again."
         : error instanceof Error
         ? error.message
         : "Request failed";
@@ -209,7 +209,7 @@ async function authorizedJsonFetch<T>(
     }
   }
 
-  throw lastError ?? new Error("Request failed");
+  throw lastError ?? new Error("We couldn’t complete that request right now.");
 }
 
 export async function saveSessionSnapshot(
@@ -259,13 +259,27 @@ export async function fetchSessionDetail(sessionId: string, accessToken: string)
 }
 
 export async function requestPasswordReset(email: string) {
-  const response = await fetch(buildApiUrl("/auth/password/reset/request"), {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email }),
-  });
+  const requestUrl = buildApiUrl("/auth/password/reset/request");
+
+  let response: Response;
+
+  try {
+    response = await fetch(requestUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email }),
+    });
+  } catch (error) {
+    const isNetworkError = error instanceof TypeError;
+
+    throw new Error(
+      isNetworkError
+        ? "We couldn’t reach the password reset service right now. Please try again."
+        : "We couldn’t send the password reset request."
+    );
+  }
 
   const data = (await response.json().catch(() => null)) as
     | { ok?: boolean; message?: string; error?: string }
@@ -273,7 +287,7 @@ export async function requestPasswordReset(email: string) {
 
   if (!response.ok) {
     throw new Error(
-      data?.message || data?.error || "Unable to request password reset."
+      data?.message || data?.error || "We couldn’t send the password reset request."
     );
   }
 
