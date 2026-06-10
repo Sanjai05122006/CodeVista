@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Clock3, History, MoveRight } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { fetchSessionHistory } from "@/lib/api";
@@ -30,19 +29,12 @@ const getHistoryCacheKey = (userId: string) =>
   `${HISTORY_CACHE_PREFIX}${userId}`;
 
 export default function HistoryPage() {
-  const router = useRouter();
   const { accessToken, loading, session } = useAuth();
   const [items, setItems] = useState<HistorySession[]>([]);
   const [fetching, setFetching] = useState(true);
   const [fetchingMore, setFetchingMore] = useState(false);
   const [hasMore, setHasMore] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!loading && !session) {
-      router.replace("/login");
-    }
-  }, [loading, router, session]);
 
   useEffect(() => {
     if (!accessToken) {
@@ -164,10 +156,10 @@ export default function HistoryPage() {
 
   if (loading) {
     return (
-      <PublicPageFrame headerVariant="landing">
-        <main className="flex min-h-full px-6 py-10 text-[var(--body)] lg:px-10">
-          <div className="mx-auto flex w-full max-w-5xl flex-1 items-start">
-            <div className="w-full">
+      <PublicPageFrame headerVariant="site" footerVariant="site">
+        <main className="px-4 py-6 pb-12 text-[var(--ink)] sm:px-8 sm:py-10 lg:px-14">
+          <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 sm:gap-6">
+            <div className="mx-auto w-full max-w-5xl">
               <StatusCard
                 tone="info"
                 title="Loading history"
@@ -180,110 +172,136 @@ export default function HistoryPage() {
     );
   }
 
+  const isGuestView = !session;
+
   return (
-    <PublicPageFrame headerVariant="landing">
-      <main className="flex min-h-full px-6 py-10 pb-16 text-[var(--ink)] lg:px-10">
-        <div className="mx-auto max-w-5xl">
-        <div className="cv-shadow-lg rounded-2xl border border-[var(--hairline)] bg-white p-8">
-          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="font-mono-ui inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-4 py-1.5 text-[12px] text-[var(--body)]">
-                <History size={15} />
-                History
+    <PublicPageFrame headerVariant="site" footerVariant="site">
+      <main className="px-4 py-6 pb-12 text-[var(--ink)] sm:px-8 sm:py-10 lg:px-14">
+        <div className="mx-auto flex w-full max-w-[1440px] flex-col gap-5 sm:gap-6">
+          <div className="mx-auto w-full max-w-5xl">
+            <div className="cv-shadow-lg rounded-2xl border border-[var(--hairline)] bg-white p-8">
+              <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <div className="font-mono-ui inline-flex items-center gap-2 rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-4 py-1.5 text-[12px] text-[var(--body)]">
+                    <History size={15} />
+                    History
+                  </div>
+                  <h1 className="font-display mt-5 text-[clamp(1.75rem,6vw,2.25rem)] font-semibold tracking-[-1.28px] text-[var(--ink)]">
+                    Your saved coding sessions
+                  </h1>
+                  <p className="mt-3 max-w-2xl text-base leading-8 text-[var(--body)]">
+                    Reopen previous work with its saved code, analysis,
+                    execution output, and attached conversation context. This
+                    is the recovery layer that keeps CodeVista useful across
+                    multiple learning sessions.
+                  </p>
+                </div>
+
+                <Link
+                  href="/editor"
+                  className="inline-flex h-12 items-center gap-2 rounded-[100px] bg-[var(--ink)] px-5 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
+                >
+                  Open Editor
+                  <MoveRight size={16} />
+                </Link>
               </div>
-              <h1 className="font-display mt-5 text-4xl font-semibold tracking-[-1.28px] text-[var(--ink)]">
-                Your saved coding sessions
-              </h1>
-              <p className="mt-3 max-w-2xl text-base leading-8 text-[var(--body)]">
-                Reopen previous work with its saved code, analysis, execution
-                output, and attached conversation context. This is the recovery
-                layer that keeps CodeVista useful across multiple learning
-                sessions.
-              </p>
-            </div>
 
-            <Link
-              href="/editor"
-              className="inline-flex h-12 items-center gap-2 rounded-[100px] bg-[var(--ink)] px-5 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
-            >
-              Open Editor
-              <MoveRight size={16} />
-            </Link>
-          </div>
-
-          <div className="mt-10">
-            {fetching ? (
-              <StatusCard
-                tone="info"
-                title="Fetching saved sessions"
-                message="Retrieving your saved sessions now."
-              />
-            ) : error ? (
-              <StatusCard
-                tone="error"
-                title="Unable to load history"
-                message={error}
-              />
-            ) : items.length === 0 ? (
-              <StatusCard
-                tone="neutral"
-                title="No saved sessions yet"
-                message="Run code in the editor and save activity through the existing session pipeline. Your recent work will appear here once records exist."
-              />
-            ) : (
-              <div className="grid gap-4">
-                {items.map((item) => (
-                  <div
-                    key={item.id}
-                    className="cv-shadow-md rounded-xl border border-[var(--hairline)] bg-white p-6"
-                  >
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <p className="font-display text-xl font-semibold tracking-[-0.6px] text-[var(--ink)]">
-                          {item.title || "Untitled session"}
-                        </p>
-                        <div className="mt-2 flex items-center gap-2 text-sm text-[var(--body)]">
-                          <Clock3 size={14} />
-                          {new Date(item.created_at).toLocaleString()}
-                        </div>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                          <span className="font-mono-ui rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-1 text-[11px] text-[var(--body)]">
-                            {item.language || "Unknown language"}
-                          </span>
-                          <span className="font-mono-ui rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-1 text-[11px] text-[var(--body)]">
-                            {item.execution_count} run{item.execution_count === 1 ? "" : "s"}
-                          </span>
-                        </div>
-                      </div>
-
+              <div className="mt-10">
+                {isGuestView ? (
+                  <div className="grid gap-4">
+                    <StatusCard
+                      tone="neutral"
+                      title="Sign in to view your saved sessions"
+                      message="History is public for now, but your saved code sessions appear after you sign in to your CodeVista account."
+                    />
+                    <div className="flex flex-col gap-3 sm:flex-row">
                       <Link
-                        href={`/editor?sessionId=${item.id}`}
-                        className="inline-flex items-center justify-center rounded-[100px] bg-[var(--ink)] px-4 py-2 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
+                        href="/login"
+                        className="inline-flex h-12 items-center justify-center rounded-[100px] bg-[var(--ink)] px-5 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
                       >
-                        Reopen Session
+                        Sign in
+                      </Link>
+                      <Link
+                        href="/register"
+                        className="inline-flex h-12 items-center justify-center rounded-[100px] border border-[var(--hairline)] bg-white px-5 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)]"
+                      >
+                        Create account
                       </Link>
                     </div>
                   </div>
-                ))}
+                ) : fetching ? (
+                  <StatusCard
+                    tone="info"
+                    title="Fetching saved sessions"
+                    message="Retrieving your saved sessions now."
+                  />
+                ) : error ? (
+                  <StatusCard
+                    tone="error"
+                    title="Unable to load history"
+                    message={error}
+                  />
+                ) : items.length === 0 ? (
+                  <StatusCard
+                    tone="neutral"
+                    title="No saved sessions yet"
+                    message="Run code in the editor and save activity through the existing session pipeline. Your recent work will appear here once records exist."
+                  />
+                ) : (
+                  <div className="grid gap-4">
+                    {items.map((item) => (
+                      <div
+                        key={item.id}
+                        className="cv-shadow-md rounded-xl border border-[var(--hairline)] bg-white p-6"
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div>
+                            <p className="font-display text-[clamp(1.125rem,4vw,1.25rem)] font-semibold tracking-[-0.6px] text-[var(--ink)]">
+                              {item.title || "Untitled session"}
+                            </p>
+                            <div className="mt-2 flex items-center gap-2 text-sm text-[var(--body)]">
+                              <Clock3 size={14} />
+                              {new Date(item.created_at).toLocaleString()}
+                            </div>
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              <span className="font-mono-ui rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-1 text-[11px] text-[var(--body)]">
+                                {item.language || "Unknown language"}
+                              </span>
+                              <span className="font-mono-ui rounded-full border border-[var(--hairline)] bg-[var(--canvas-soft)] px-3 py-1 text-[11px] text-[var(--body)]">
+                                {item.execution_count} run{item.execution_count === 1 ? "" : "s"}
+                              </span>
+                            </div>
+                          </div>
 
-                {hasMore ? (
-                  <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        void loadMore();
-                      }}
-                      disabled={fetchingMore}
-                      className="inline-flex items-center justify-center rounded-[100px] border border-[var(--hairline)] bg-white px-5 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {fetchingMore ? "Loading more..." : "Show More"}
-                    </button>
+                          <Link
+                            href={`/editor?sessionId=${item.id}`}
+                            className="inline-flex items-center justify-center rounded-[100px] bg-[var(--ink)] px-4 py-2 text-sm font-medium text-[var(--on-primary)] transition hover:opacity-90"
+                          >
+                            Reopen Session
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+
+                    {hasMore ? (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            void loadMore();
+                          }}
+                          disabled={fetchingMore}
+                          className="inline-flex items-center justify-center rounded-[100px] border border-[var(--hairline)] bg-white px-5 py-3 text-sm font-medium text-[var(--ink)] transition hover:bg-[var(--canvas-soft)] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {fetchingMore ? "Loading more..." : "Show More"}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
-                ) : null}
+                )}
               </div>
-            )}
+            </div>
           </div>
-        </div>
         </div>
       </main>
     </PublicPageFrame>
