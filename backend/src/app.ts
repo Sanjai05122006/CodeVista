@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import { env } from "./config/env";
 import { errorHandler } from "./middleware/error.middleware";
 
 import executionRoutes from "./routes/execution.routes";
@@ -10,9 +9,11 @@ import languageRoutes from "./routes/language.routes";
 import sessionRoutes from "./routes/session.routes";
 import historyRoutes from "./routes/history.routes";
 import chatRoutes from "./routes/chat.routes";
+import contactRoutes from "./routes/contact.routes";
 import workspaceRoutes from "./routes/workspace.routes";
 import authRoutes from "./routes/auth.routes";
 import { MAX_JSON_BODY_SIZE } from "./middleware/rateLimit.middleware";
+import { buildTrustedFrontendOrigins } from "./utils/frontend-origins";
 
 const app = express();
 const apiRouter = express.Router();
@@ -25,7 +26,7 @@ app.use(
 );
 app.use(
   cors({
-    origin: env.FRONTEND_URL,
+    origin: buildTrustedFrontendOrigins(),
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
@@ -63,6 +64,8 @@ app.get("/", (req, res) => {
       "GET /api/session/history",
       "POST /api/chat",
       "POST /api/chat/batch",
+      "POST /api/contact/send",
+      "POST /api/contact/log",
       "POST /api/auth/password/reset/request",
     ],
   });
@@ -87,6 +90,7 @@ apiRouter.use("/languages", languageRoutes);
 apiRouter.use("/session", sessionRoutes);
 apiRouter.use("/history", historyRoutes);
 apiRouter.use("/chat", chatRoutes);
+apiRouter.use("/contact", contactRoutes);
 apiRouter.use("/auth", authRoutes);
 
 app.use("/api", apiRouter);
