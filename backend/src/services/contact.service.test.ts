@@ -46,10 +46,9 @@ const run = async () => {
   const originalFetch = globalThis.fetch.bind(globalThis);
   const expectedRecipient =
     process.env.CONTACT_TO_EMAIL?.trim() || "delivered@resend.dev";
-  const fallbackRecipient = "wolf.wolfy.fox@gmail.com";
 
   const logs: LoggedEntry[] = [];
-  let resendMode: "success" | "validation-reject" | "failure" = "success";
+  let resendMode: "success" | "failure" = "success";
 
   mutableLogger.info = (message, meta) => {
     logs.push({ level: "info", message, meta });
@@ -61,30 +60,10 @@ const run = async () => {
 
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = typeof input === "string" ? input : input.toString();
-    const requestBody =
-      typeof init?.body === "string"
-        ? (JSON.parse(init.body) as { to?: string[] })
-        : null;
-    const recipient = requestBody?.to?.[0] ?? null;
 
     if (url === "https://api.resend.com/emails") {
       if (resendMode === "success") {
         return jsonResponse({ id: "mock-resend-message-id" }, 200);
-      }
-
-      if (resendMode === "validation-reject") {
-        if (recipient === fallbackRecipient) {
-          return jsonResponse({ id: "mock-resend-message-id-fallback" }, 200);
-        }
-
-        return jsonResponse(
-          {
-            name: "validation_error",
-            message:
-              "You can only send testing emails to your own email address (wolf.wolfy.fox@gmail.com). To send emails to other recipients, please verify a domain at resend.com/domains, and change the `from` address to an email using this domain.",
-          },
-          403
-        );
       }
 
       return jsonResponse(
@@ -100,6 +79,7 @@ const run = async () => {
   }) as typeof fetch;
 
   try {
+    // recordContactSubmissionLog — success path
     const successResult = await recordContactSubmissionLog(
       {
         status: "success",
@@ -134,6 +114,7 @@ const run = async () => {
         throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
       }
 
+      // /api/contact/log HTTP endpoint
       const logResponse = await originalFetch(
         `http://127.0.0.1:${address.port}/api/contact/log`,
         {
@@ -148,7 +129,7 @@ const run = async () => {
             message_length: 21,
             provider_status: 401,
             provider_message: "Invalid access key",
-            error_code: "WEB3FORMS_SUBMIT_FAILED",
+            error_code: "RESEND_SEND_FAILED",
           }),
         }
       );
@@ -168,8 +149,7 @@ const run = async () => {
 
       logs.length = 0;
 
-      resendMode = "validation-reject";
-
+      // sendContactSubmissionMessage — success path
       const submitResult = await sendContactSubmissionMessage(
         {
           name: "Example User",
@@ -183,42 +163,22 @@ const run = async () => {
         }
       );
 
-      assert.equal(submitResult.messageId, "mock-resend-message-id-fallback");
+      assert.equal(submitResult.messageId, "mock-resend-message-id");
       assert.equal(submitResult.providerStatus, 200);
-      assert.equal(submitResult.recipient, fallbackRecipient);
-      assert.ok(
-        logs.some(
-          (entry) =>
-            entry.message === "contact.message.delivery_failed" &&
-            entry.level === "warn" &&
-            entry.meta?.status === "error" &&
-            entry.meta?.recipient === expectedRecipient &&
-            entry.meta?.failure_reason === "provider_validation_rejection"
-        )
-      );
-      assert.ok(
-        logs.some(
-          (entry) =>
-            entry.message === "contact.message.delivery_retry" &&
-            entry.level === "warn" &&
-            entry.meta?.attempted_recipient === expectedRecipient &&
-            entry.meta?.fallback_recipient === fallbackRecipient
-        )
-      );
+      assert.equal(submitResult.recipient, expectedRecipient);
       assert.ok(
         logs.some(
           (entry) =>
             entry.message === "contact.message.delivered" &&
             entry.level === "info" &&
             entry.meta?.status === "success" &&
-            entry.meta?.recipient === fallbackRecipient
+            entry.meta?.recipient === expectedRecipient
         )
       );
-      assert.equal(logs[0]?.meta?.provider_status, 403);
-      assert.equal(logs[0]?.meta?.recipient, expectedRecipient);
 
       logs.length = 0;
 
+      // /api/contact/send HTTP endpoint — success path
       const sendResponse = await originalFetch(
         `http://127.0.0.1:${address.port}/api/contact/send`,
         {
@@ -247,7 +207,7 @@ const run = async () => {
       assert.equal(sendResponse.status, 200);
       assert.equal(sendData.ok, true);
       assert.equal(sendData.message, "Your message was sent successfully.");
-      assert.equal(sendData.message_id, "mock-resend-message-id-fallback");
+      assert.equal(sendData.message_id, "mock-resend-message-id");
       assert.equal(sendData.provider_status, 200);
       assert.ok(
         logs.some(
@@ -255,25 +215,7 @@ const run = async () => {
             entry.message === "contact.message.delivered" &&
             entry.level === "info" &&
             entry.meta?.status === "success" &&
-            entry.meta?.recipient === fallbackRecipient
-        )
-      );
-      assert.ok(
-        logs.some(
-          (entry) =>
-            entry.message === "contact.message.delivery_failed" &&
-            entry.level === "warn" &&
-            entry.meta?.recipient === expectedRecipient &&
-            entry.meta?.failure_reason === "provider_validation_rejection"
-        )
-      );
-      assert.ok(
-        logs.some(
-          (entry) =>
-            entry.message === "contact.message.delivery_retry" &&
-            entry.level === "warn" &&
-            entry.meta?.attempted_recipient === expectedRecipient &&
-            entry.meta?.fallback_recipient === fallbackRecipient
+            entry.meta?.recipient === expectedRecipient
         )
       );
 
@@ -281,6 +223,7 @@ const run = async () => {
 
       resendMode = "failure";
 
+      // sendContactSubmissionMessage — failure path
       await assert.rejects(
         () =>
           sendContactSubmissionMessage(
@@ -314,6 +257,7 @@ const run = async () => {
 
       logs.length = 0;
 
+      // /api/contact/send HTTP endpoint — failure path
       const failureResponse = await originalFetch(
         `http://127.0.0.1:${address.port}/api/contact/send`,
         {
