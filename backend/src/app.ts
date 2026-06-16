@@ -65,7 +65,6 @@ app.get("/", (req, res) => {
       "POST /api/chat",
       "POST /api/chat/batch",
       "POST /api/contact/send",
-      "POST /api/contact/log",
       "POST /api/auth/password/reset/request",
     ],
   });

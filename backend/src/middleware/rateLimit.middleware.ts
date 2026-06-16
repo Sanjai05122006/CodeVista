@@ -38,9 +38,7 @@ export const MAX_EMAIL_LENGTH = 320;
 export const MAX_STDIN_LENGTH = 2_000;
 export const MAX_CHAT_MESSAGE_LENGTH = 4_000;
 export const MAX_CONTACT_SUBJECT_LENGTH = 120;
-export const MAX_CONTACT_ERROR_CODE_LENGTH = 120;
 export const MAX_CONTACT_MESSAGE_LENGTH = 5_000;
-export const MAX_CONTACT_PROVIDER_MESSAGE_LENGTH = 500;
 export const MAX_CONTACT_NAME_LENGTH = 120;
 export const MAX_CHAT_HISTORY_MESSAGES = 20;
 export const MAX_CHAT_BATCH_MESSAGES = 50;
@@ -344,80 +342,6 @@ export const validatePasswordResetRequest = (
         400,
         "email must be a valid email address."
       );
-    }
-
-    next();
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const validateContactLogRequest = (
-  req: Request,
-  _res: Response,
-  next: NextFunction
-) => {
-  try {
-    assertObjectBody(req);
-    validateTrimmedString(req, {
-      field: "status",
-      maxLength: 16,
-    });
-    validateTrimmedString(req, {
-      field: "subject",
-      maxLength: MAX_CONTACT_SUBJECT_LENGTH,
-    });
-
-    if (req.body.status !== "success" && req.body.status !== "error") {
-      throw new AppError(
-        "INVALID_REQUEST_BODY",
-        400,
-        "status must be success or error."
-      );
-    }
-
-    if (
-      typeof req.body.message_length !== "number" ||
-      !Number.isInteger(req.body.message_length) ||
-      req.body.message_length < 0 ||
-      req.body.message_length > MAX_CONTACT_MESSAGE_LENGTH
-    ) {
-      throw new AppError(
-        "INVALID_REQUEST_BODY",
-        400,
-        "message_length must be a valid integer."
-      );
-    }
-
-    if (req.body.provider_status != null) {
-      if (
-        typeof req.body.provider_status !== "number" ||
-        !Number.isInteger(req.body.provider_status) ||
-        req.body.provider_status < 100 ||
-        req.body.provider_status > 599
-      ) {
-        throw new AppError(
-          "INVALID_REQUEST_BODY",
-          400,
-          "provider_status must be a valid HTTP status code."
-        );
-      }
-    }
-
-    if (req.body.provider_message != null) {
-      validateTrimmedString(req, {
-        field: "provider_message",
-        maxLength: MAX_CONTACT_PROVIDER_MESSAGE_LENGTH,
-        required: false,
-      });
-    }
-
-    if (req.body.error_code != null) {
-      validateTrimmedString(req, {
-        field: "error_code",
-        maxLength: MAX_CONTACT_ERROR_CODE_LENGTH,
-        required: false,
-      });
     }
 
     next();
@@ -928,12 +852,6 @@ export const expensiveEndpointRateLimits = {
     name: "password-reset-request",
     anonymousLimit: 3,
     authenticatedLimit: 5,
-    windowMs: 15 * 60_000,
-  }),
-  contactLog: createRateLimitMiddleware({
-    name: "contact",
-    anonymousLimit: 5,
-    authenticatedLimit: 10,
     windowMs: 15 * 60_000,
   }),
   sessionSave: createRateLimitMiddleware({
