@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { ToastProvider } from "@/components/ui/toast";
 
 export const metadata: Metadata = {
   title: "CodeVista",
@@ -16,7 +17,9 @@ export default function RootLayout({
     <html lang="en" className="h-full antialiased" suppressHydrationWarning>
       <body className="h-full" suppressHydrationWarning>
         <AuthProvider>
-          <div className="min-h-full">{children}</div>
+          <ToastProvider>
+            <div className="min-h-full">{children}</div>
+          </ToastProvider>
         </AuthProvider>
       </body>
     </html>

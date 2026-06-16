@@ -10,6 +10,7 @@ import { LogIn } from "lucide-react";
 import AnalysisPanel from "../../components/analysis-panel";
 import ChatContainer from "@/components/chat/ChatContainer";
 import { StatusCard } from "@/components/ui/StatusCard";
+import { useToast } from "@/components/ui/toast";
 import {
   fetchSessionDetail,
   runWorkspace,
@@ -20,7 +21,11 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { useSessionBuffer } from "@/hooks/useSessionBuffer";
 import { getStoredThreadId, setStoredThreadId } from "@/hooks/useLocalChat";
-import { saveTraceWorkspaceSnapshot } from "@/lib/trace-workspace";
+import {
+  readTraceWorkspaceSnapshot,
+  saveTraceWorkspaceSnapshot,
+  type TraceWorkspaceSnapshot,
+} from "@/lib/trace-workspace";
 import { type TraceStep } from "@/lib/trace-visualizer";
 import { deriveSessionTitle } from "@/lib/session-title";
 
@@ -73,8 +78,21 @@ function EditorWorkspace() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { accessToken, loading: authLoading, session, signOut } = useAuth();
-  const [code, setCode] = useState("console.log(2+3)");
-  const [language, setLanguage] = useState("javascript");
+  const { toast } = useToast();
+
+  // Read the in-tab workspace snapshot once on mount so navigating back from the
+  // visualizer (or returning to the editor in the same tab) restores the last
+  // code/language/trace instead of resetting to the default sample.
+  const [initialSnapshot] = useState<TraceWorkspaceSnapshot | null>(() =>
+    typeof window === "undefined" ? null : readTraceWorkspaceSnapshot()
+  );
+
+  const [code, setCode] = useState(
+    () => initialSnapshot?.code || "console.log(2+3)"
+  );
+  const [language, setLanguage] = useState(
+    () => initialSnapshot?.language || "javascript"
+  );
   const [stdin, setStdin] = useState("");
   const [monacoReady, setMonacoReady] = useState(false);
   const [monacoError, setMonacoError] = useState<string | null>(null);
@@ -83,13 +101,14 @@ function EditorWorkspace() {
   const [loading, setLoading] = useState(false);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"output" | "analysis">("output");
-  const [executionError, setExecutionError] = useState<string | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [chatThreadId, setChatThreadId] = useState("");
   const [restoringSession, setRestoringSession] = useState(false);
   const [restoredSessionTitle, setRestoredSessionTitle] = useState<string | null>(null);
   const [hasRestoredConversation, setHasRestoredConversation] = useState(false);
-  const [traceSteps, setTraceSteps] = useState<TraceStep[]>([]);
+  const [traceSteps, setTraceSteps] = useState<TraceStep[]>(
+    () => initialSnapshot?.traceSteps ?? []
+  );
   const editorRef = useRef<Monaco.editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<typeof Monaco | null>(null);
   const { appendExecution, flush, hydrateSession, saveError, sessionId } =
@@ -244,9 +263,18 @@ function EditorWorkspace() {
         },
       }));
 
+    // When the in-tab snapshot already holds this exact session, it is fresher
+    // than (or equal to) the backend copy — keep the local code/trace and use
+    // the fetch only to rehydrate the save buffer, chat, and title. Otherwise
+    // (a different session reopened from history) do a full restore.
+    const keepLocal = Boolean(
+      initialSnapshot &&
+        initialSnapshot.sessionId === requestedSessionId &&
+        initialSnapshot.code
+    );
+
     void (async () => {
       setRestoringSession(true);
-      setExecutionError(null);
       setAnalysisError(null);
 
       try {
@@ -259,42 +287,45 @@ function EditorWorkspace() {
         const latestExecution =
           detail.executions[detail.executions.length - 1] ?? null;
 
-        if (latestExecution) {
-          setCode(latestExecution.code);
-          setLanguage(latestExecution.language);
-          setResult({
-            stdout: latestExecution.output.stdout,
-            stderr: latestExecution.output.stderr,
-            runtime_ms: latestExecution.output.runtime_ms,
-            memory_kb: latestExecution.output.memory_kb,
-          });
-          setAnalysis(
-            latestExecution.analysis
-              ? {
-                  algorithm_name: latestExecution.analysis.algorithm_name || "",
-                  pseudocode: latestExecution.analysis.pseudocode,
-                  algorithm_steps: latestExecution.analysis.algorithm_steps,
-                  time_complexity: {
-                    best: latestExecution.analysis.time_complexity.best || "",
-                    average: latestExecution.analysis.time_complexity.average || "",
-                    worst: latestExecution.analysis.time_complexity.worst || "",
-                  },
-                  space_complexity: latestExecution.analysis.space_complexity,
-                  source: "cache",
-                }
-              : null
-          );
-          const restoredTrace = normalizeTrace(
-            latestExecution.analysis?.execution_trace ?? []
-          );
-          setTraceSteps(restoredTrace);
-        } else {
-          setResult(null);
-          setAnalysis(null);
-          setTraceSteps([]);
+        if (!keepLocal) {
+          if (latestExecution) {
+            setCode(latestExecution.code);
+            setLanguage(latestExecution.language);
+            setResult({
+              stdout: latestExecution.output.stdout,
+              stderr: latestExecution.output.stderr,
+              runtime_ms: latestExecution.output.runtime_ms,
+              memory_kb: latestExecution.output.memory_kb,
+            });
+            setAnalysis(
+              latestExecution.analysis
+                ? {
+                    algorithm_name: latestExecution.analysis.algorithm_name || "",
+                    pseudocode: latestExecution.analysis.pseudocode,
+                    algorithm_steps: latestExecution.analysis.algorithm_steps,
+                    time_complexity: {
+                      best: latestExecution.analysis.time_complexity.best || "",
+                      average: latestExecution.analysis.time_complexity.average || "",
+                      worst: latestExecution.analysis.time_complexity.worst || "",
+                    },
+                    space_complexity: latestExecution.analysis.space_complexity,
+                    source: "cache",
+                  }
+                : null
+            );
+            const restoredTrace = normalizeTrace(
+              latestExecution.analysis?.execution_trace ?? []
+            );
+            setTraceSteps(restoredTrace);
+          } else {
+            setResult(null);
+            setAnalysis(null);
+            setTraceSteps([]);
+          }
+
+          setActiveTab("analysis");
         }
 
-        setActiveTab("analysis");
         setRestoredSessionTitle(detail.title || null);
         hydrateSession({
           sessionId: detail.id,
@@ -309,16 +340,27 @@ function EditorWorkspace() {
         setHasRestoredConversation(
           Boolean(detail.chat?.messages && detail.chat.messages.length > 0)
         );
+
+        if (!keepLocal) {
+          toast({
+            tone: "info",
+            title: "Session restored",
+            message: detail.title || "Saved session loaded.",
+          });
+        }
       } catch (error) {
         if (!active) {
           return;
         }
 
-        setExecutionError(
-          error instanceof Error
-            ? error.message
-            : "Unable to restore the saved session."
-        );
+        toast({
+          tone: "error",
+          title: "Couldn't restore session",
+          message:
+            error instanceof Error
+              ? error.message
+              : "Unable to restore the saved session.",
+        });
         const fallbackThreadId = getStoredThreadId();
         setStoredThreadId(fallbackThreadId);
         setChatThreadId(fallbackThreadId);
@@ -333,24 +375,25 @@ function EditorWorkspace() {
     return () => {
       active = false;
     };
-  }, [accessToken, hydrateSession, requestedSessionId]);
+  }, [accessToken, hydrateSession, initialSnapshot, requestedSessionId, toast]);
+
+  useEffect(() => {
+    if (saveError) {
+      toast({
+        tone: "warning",
+        title: "Autosave interrupted",
+        message: saveError,
+      });
+    }
+  }, [saveError, toast]);
 
   const runCode = async () => {
-    if (!accessToken) {
-      setExecutionError(
-        "Sign in is required to run code, generate analysis, and view traces in the secured workspace."
-      );
-      setAnalysisError(
-        "Sign in is required to use analysis and trace features."
-      );
-      setActiveTab("output");
-      return;
-    }
-
+    // Editor is an open route for testing — anonymous runs are allowed as long
+    // as the backend has ALLOW_ANONYMOUS_WORKSPACE enabled. Sign-in only adds
+    // session autosave and chat.
     try {
       setLoading(true);
       setAnalysisLoading(true);
-      setExecutionError(null);
       setAnalysisError(null);
       setActiveTab("output");
       setAnalysis(null);
@@ -380,7 +423,23 @@ function EditorWorkspace() {
       setTraceSteps(nextTraceSteps);
 
       if (executionData.error?.message) {
-        setExecutionError(executionData.error.message);
+        toast({
+          tone: "error",
+          title: "Execution failed",
+          message: executionData.error.message,
+        });
+      } else if (executionData.stderr) {
+        toast({
+          tone: "error",
+          title: "Finished with errors",
+          message: "Your program wrote to stderr — check the console output.",
+        });
+      } else {
+        toast({
+          tone: "success",
+          title: "Run complete",
+          message: `Finished in ${executionData.runtime_ms ?? 0} ms.`,
+        });
       }
 
       if (!analysisData.algorithm_name && analysisData.pseudocode.length === 0) {
@@ -432,11 +491,13 @@ function EditorWorkspace() {
         message.includes("INVALID_AUTH_TOKEN") ||
         message.toLowerCase().includes("sign in is required");
 
-      setExecutionError(
-        isAuthFailure
-          ? "Sign in is required to use execution, analysis, and trace in the secured workspace."
-          : "🌐 Network error. Please check your connection."
-      );
+      toast({
+        tone: "error",
+        title: isAuthFailure ? "Sign in required" : "Network error",
+        message: isAuthFailure
+          ? "Sign in to use execution, analysis, and trace in the secured workspace."
+          : "Couldn't reach the workspace service. Check your connection and try again.",
+      });
     } finally {
       setLoading(false);
       setAnalysisLoading(false);
@@ -587,34 +648,6 @@ function EditorWorkspace() {
             </div>
 
             <div className="flex min-h-[380px] flex-col gap-4 rounded-2xl bg-[#0b1220] p-4 lg:min-h-0 lg:w-[30%]">
-              {executionError && (
-                <StatusCard
-                  variant="dark"
-                  tone="error"
-                  compact
-                  title="Execution failed"
-                  message={executionError}
-                />
-              )}
-              {saveError && (
-                <StatusCard
-                  variant="dark"
-                  tone="warning"
-                  compact
-                  title="Save interrupted"
-                  message={saveError}
-                />
-              )}
-              {requestedSessionId && activeRestoredSessionTitle && (
-                <StatusCard
-                  variant="dark"
-                  tone="info"
-                  compact
-                  title="Restored session"
-                  message={`Restored session: ${activeRestoredSessionTitle}`}
-                />
-              )}
-
               <div>
                 <h3 className="mb-3 text-sm text-gray-300">Performance</h3>
 

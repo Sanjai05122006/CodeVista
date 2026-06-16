@@ -269,30 +269,36 @@ function EditorInsightsWorkspace() {
   }, [accessToken, requestedSessionId]);
 
   const activeSnapshot = useMemo(() => {
-    if (sessionSnapshot) {
+    const localMatches =
+      localSnapshot &&
+      (!requestedSessionId || localSnapshot.sessionId === requestedSessionId);
+
+    // The in-tab snapshot is the ground truth for the run the user just opened
+    // the visualizer from. Prefer it whenever it has trace steps so the view
+    // never depends on the debounced backend save having flushed first.
+    if (localMatches && localSnapshot.traceSteps.length > 0) {
+      return localSnapshot;
+    }
+
+    if (sessionSnapshot && sessionSnapshot.traceSteps.length > 0) {
       return sessionSnapshot;
     }
 
-    if (
-      localSnapshot &&
-      (!requestedSessionId || localSnapshot.sessionId === requestedSessionId)
-    ) {
+    if (localMatches) {
       return localSnapshot;
+    }
+
+    if (sessionSnapshot) {
+      return sessionSnapshot;
     }
 
     return requestedSessionId ? null : localSnapshot;
   }, [localSnapshot, requestedSessionId, sessionSnapshot]);
 
-  const sourceBadge = sessionSnapshot
-    ? {
-        label: "Saved Session",
-        icon: Database,
-      }
-    : activeSnapshot
-    ? {
-        label: "Local Workspace",
-        icon: LaptopMinimal,
-      }
+  const sourceBadge = activeSnapshot
+    ? activeSnapshot === sessionSnapshot
+      ? { label: "Saved Session", icon: Database }
+      : { label: "Local Workspace", icon: LaptopMinimal }
     : null;
 
   return (
@@ -338,7 +344,7 @@ function EditorInsightsWorkspace() {
           </div>
         ) : null}
 
-        {loadError ? (
+        {loadError && !activeSnapshot ? (
           <StatusCard
             variant="dark"
             tone="warning"
@@ -348,7 +354,12 @@ function EditorInsightsWorkspace() {
           />
         ) : null}
 
-        {loadingSnapshot || (authLoading && requestedSessionId) ? (
+        {activeSnapshot ? (
+          <TraceWorkspaceView
+            key={`${activeSnapshot.capturedAt}-${activeSnapshot.sessionId ?? "local"}`}
+            snapshot={activeSnapshot}
+          />
+        ) : loadingSnapshot || (authLoading && requestedSessionId) ? (
           <div className="flex flex-1 items-center">
             <StatusCard
               variant="dark"
@@ -358,11 +369,6 @@ function EditorInsightsWorkspace() {
               message="Pulling the latest snapshot for the visualizer."
             />
           </div>
-        ) : activeSnapshot ? (
-          <TraceWorkspaceView
-            key={`${activeSnapshot.capturedAt}-${activeSnapshot.sessionId ?? "local"}`}
-            snapshot={activeSnapshot}
-          />
         ) : (
           <div className="flex flex-1 items-center">
             <StatusCard
