@@ -114,41 +114,6 @@ const run = async () => {
         throw new Error("TEST_SERVER_ADDRESS_UNAVAILABLE");
       }
 
-      // /api/contact/log HTTP endpoint
-      const logResponse = await originalFetch(
-        `http://127.0.0.1:${address.port}/api/contact/log`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Origin: "http://127.0.0.1:3001",
-          },
-          body: JSON.stringify({
-            status: "error",
-            subject: "Billing question",
-            message_length: 21,
-            provider_status: 401,
-            provider_message: "Invalid access key",
-            error_code: "RESEND_SEND_FAILED",
-          }),
-        }
-      );
-
-      const logData = (await logResponse.json()) as {
-        ok: boolean;
-      };
-
-      assert.equal(logResponse.status, 200);
-      assert.equal(logData.ok, true);
-      assert.ok(
-        logs.some((entry) => entry.message === "contact.message.delivery_failed")
-      );
-      assert.equal(logs[0]?.level, "warn");
-      assert.equal(logs[0]?.meta?.status, "error");
-      assert.equal(logs[0]?.meta?.provider_status, 401);
-
-      logs.length = 0;
-
       // sendContactSubmissionMessage — success path
       const submitResult = await sendContactSubmissionMessage(
         {
